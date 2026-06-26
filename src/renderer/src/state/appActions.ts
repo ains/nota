@@ -11,6 +11,10 @@ import {
   deserializeProject,
 } from "../persistence/projectFile";
 import { notesToMidiBytes, midiBytesToNotes } from "../persistence/midiFile";
+import {
+  addRecentProject,
+  removeRecentProject,
+} from "../persistence/recentProjects";
 import { useProjectStore, clearHistory } from "./projectStore";
 import { useSessionStore } from "./sessionStore";
 
@@ -68,10 +72,36 @@ export function selectMidiDevice(id: string | null): void {
 
 // --- audio / project files ---
 
+/** Record a saved project in the library of recently opened projects. */
+function recordRecent(path: string, audioFileName: string): void {
+  const name =
+    path
+      .split("/")
+      .pop()
+      ?.replace(/\.[^.]+$/, "") ?? "project";
+  addRecentProject({ path, name, audioFileName });
+}
+
 export async function openAudioFile(): Promise<void> {
   const result = await window.nota.openAudioFile();
   if (!result) return;
   await loadAudioIntoApp(result, true);
+  useSessionStore.getState().setView("editor");
+}
+
+/** Create a new project from a dropped/selected audio File (library screen). */
+export async function createProjectFromAudioFile(file: File): Promise<void> {
+  const path = window.nota.getPathForFile(file);
+  if (!path) return;
+  const audio = await window.nota.readAudioFile(path);
+  if (!audio) return;
+  try {
+    await loadAudioIntoApp(audio, true);
+  } catch (err) {
+    console.error("Failed to load dropped audio:", err);
+    return;
+  }
+  useSessionStore.getState().setView("editor");
 }
 
 async function loadAudioIntoApp(
@@ -118,7 +148,28 @@ async function loadAudioIntoApp(
 export async function openProject(): Promise<void> {
   const result = await window.nota.openProject();
   if (!result) return;
-  const data = deserializeProject(result.json);
+  await loadProjectFromFile(result.path, result.json);
+}
+
+/** Open a previously saved project by path (library screen). */
+export async function openProjectByPath(path: string): Promise<void> {
+  const json = await window.nota.readProjectFile(path);
+  if (json === null) {
+    // File moved or deleted: drop it from the library.
+    removeRecentProject(path);
+    return;
+  }
+  await loadProjectFromFile(path, json);
+}
+
+async function loadProjectFromFile(path: string, json: string): Promise<void> {
+  let data;
+  try {
+    data = deserializeProject(json);
+  } catch (err) {
+    console.error("Failed to parse project:", err);
+    return;
+  }
 
   let audioFile = await window.nota.readAudioFile(data.audio.absolutePath);
   if (!audioFile) {
@@ -135,30 +186,68 @@ export async function openProject(): Promise<void> {
     audio: { ...data.audio, absolutePath: audioFile.absolutePath },
     notes: data.notes,
     loopRegions: data.loopRegions,
-    projectPath: result.path,
+    projectPath: path,
   });
   clearHistory();
   useSessionStore.getState().setActiveLoopId(null);
   await loadAudioIntoApp(audioFile, false);
-  // loadAudioIntoApp(asNewProject=false) already set the (possibly relinked) audio ref.
-  useProjectStore.getState().markSaved(result.path);
+  // loadAudioIntoApp(asNewProject=false) already set the (possibly relinked)
+  // audio ref and a fit-to-window viewport; restore the saved view over it.
+  if (data.view) {
+    const session = useSessionStore.getState();
+    const { pxPerSecond, scrollSec, playheadSec } = data.view;
+    const restored = clampScroll(
+      { pxPerSecond, scrollSec },
+      data.audio.durationSec,
+      session.laneWidthPx,
+    );
+    session.setViewport(restored);
+    engine.transport.seek(playheadSec);
+  }
+  useProjectStore.getState().markSaved(path);
+  recordRecent(path, data.audio.fileName);
+  useSessionStore.getState().setView("editor");
+}
+
+/**
+ * Return to the project library, persisting work first: a project with a path
+ * is auto-saved (capturing edits and the current view — zoom, scroll, playhead);
+ * an unsaved project prompts a save-as dialog (cancelling discards it). Saving
+ * happens before stopping so the saved playhead is the current position.
+ */
+export async function backToLibrary(): Promise<void> {
+  if (engine.isRecording) stopRecording(false);
+  const p = useProjectStore.getState();
+  if (p.audio) await saveProject();
+  engine.transport.stop();
+  useSessionStore.getState().setView("library");
 }
 
 export async function saveProject(saveAs = false): Promise<void> {
   const p = useProjectStore.getState();
   if (!p.audio) return;
+  const { viewport } = useSessionStore.getState();
   const json = serializeProject({
     audio: p.audio,
     notes: p.notes,
     loopRegions: p.loopRegions,
+    view: {
+      pxPerSecond: viewport.pxPerSecond,
+      scrollSec: viewport.scrollSec,
+      playheadSec: engine.transport.position,
+    },
   });
   if (p.projectPath && !saveAs) {
     await window.nota.saveProject(p.projectPath, json);
     p.markSaved(p.projectPath);
+    recordRecent(p.projectPath, p.audio.fileName);
   } else {
     const suggested = p.audio.fileName.replace(/\.[^.]+$/, "");
     const path = await window.nota.saveProjectAs(json, suggested);
-    if (path) p.markSaved(path);
+    if (path) {
+      p.markSaved(path);
+      recordRecent(path, p.audio.fileName);
+    }
   }
 }
 

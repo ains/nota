@@ -9,6 +9,7 @@ import { WaveformLane } from "./components/waveform/WaveformLane";
 import { PianoRoll } from "./components/pianoroll/PianoRoll";
 import { KeysGutter } from "./components/pianoroll/KeysGutter";
 import { RollOptionsBar } from "./components/pianoroll/RollOptionsBar";
+import { Library } from "./components/library/Library";
 import {
   initEngineBindings,
   togglePlay,
@@ -114,6 +115,7 @@ function RollToggleBar(): JSX.Element {
 
 function App(): JSX.Element {
   const lanesRef = useRef<HTMLDivElement | null>(null);
+  const view = useSessionStore((s) => s.view);
   const showPianoRoll = useSessionStore((s) => s.showPianoRoll);
 
   useEffect(() => {
@@ -145,15 +147,17 @@ function App(): JSX.Element {
         return;
 
       const cmd = e.metaKey || e.ctrlKey;
-      if (e.key === " ") {
-        e.preventDefault();
-        togglePlay();
-        return;
-      }
+      // Open dialogs work from either screen; everything else is editor-only.
       if (cmd && e.key.toLowerCase() === "o") {
         e.preventDefault();
         if (e.shiftKey) void openProject();
         else void openAudioFile();
+        return;
+      }
+      if (useSessionStore.getState().view !== "editor") return;
+      if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
         return;
       }
       if (cmd && e.key.toLowerCase() === "s") {
@@ -186,6 +190,14 @@ function App(): JSX.Element {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  if (view === "library") {
+    return (
+      <div className="app">
+        <Library />
+      </div>
+    );
+  }
 
   return (
     <div className="app">

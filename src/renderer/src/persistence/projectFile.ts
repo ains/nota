@@ -5,12 +5,15 @@ import {
   type LoopRegion,
   type Note,
   type Project,
+  type ProjectView,
 } from "@shared/types/project";
 
 export interface ProjectData {
   audio: AudioRef;
   notes: Note[];
   loopRegions: LoopRegion[];
+  /** Absent for files saved before view state existed. */
+  view?: ProjectView;
 }
 
 export function serializeProject(data: ProjectData): string {
@@ -19,8 +22,26 @@ export function serializeProject(data: ProjectData): string {
     audio: data.audio,
     notes: data.notes,
     loopRegions: data.loopRegions,
+    view: data.view,
   };
   return JSON.stringify(project, null, 2);
+}
+
+function parseView(raw: unknown): ProjectView | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const v = raw as Record<string, unknown>;
+  if (
+    typeof v.pxPerSecond === "number" &&
+    typeof v.scrollSec === "number" &&
+    typeof v.playheadSec === "number"
+  ) {
+    return {
+      pxPerSecond: v.pxPerSecond,
+      scrollSec: v.scrollSec,
+      playheadSec: v.playheadSec,
+    };
+  }
+  return undefined;
 }
 
 export class ProjectParseError extends Error {}
@@ -54,5 +75,6 @@ export function deserializeProject(json: string): ProjectData {
     audio: project.audio,
     notes: project.notes,
     loopRegions: project.loopRegions ?? [],
+    view: parseView(project.view),
   };
 }

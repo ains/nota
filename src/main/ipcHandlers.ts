@@ -67,6 +67,17 @@ export function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(
+    IPC.readProjectFile,
+    async (_e, path: string): Promise<string | null> => {
+      try {
+        return await readFile(path, "utf-8");
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  ipcMain.handle(
     IPC.saveProject,
     async (_e, path: string, json: string): Promise<void> => {
       await writeFile(path, json, "utf-8");

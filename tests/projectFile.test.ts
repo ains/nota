@@ -49,4 +49,32 @@ describe("project file round-trip", () => {
     const back = deserializeProject(json);
     expect(back.loopRegions).toEqual([]);
   });
+
+  it("round-trips saved view state (zoom, scroll, playhead)", () => {
+    const withView = {
+      ...sample,
+      view: { pxPerSecond: 137.5, scrollSec: 12.25, playheadSec: 42.5 },
+    };
+    const back = deserializeProject(serializeProject(withView));
+    expect(back.view).toEqual(withView.view);
+  });
+
+  it("leaves view undefined for files without it", () => {
+    const json = JSON.stringify({
+      version: 1,
+      audio: sample.audio,
+      notes: [],
+    });
+    expect(deserializeProject(json).view).toBeUndefined();
+  });
+
+  it("ignores a malformed view block", () => {
+    const json = JSON.stringify({
+      version: 1,
+      audio: sample.audio,
+      notes: [],
+      view: { pxPerSecond: "oops" },
+    });
+    expect(deserializeProject(json).view).toBeUndefined();
+  });
 });

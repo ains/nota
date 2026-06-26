@@ -10,6 +10,9 @@ import type { PeakPyramid } from "../core/audio/peaks";
 import type { CapturedNote } from "../core/engine/Recorder";
 import type { MidiDeviceInfo } from "../core/engine/MidiService";
 
+/** Top-level screen: the project library, or the transcription editor. */
+export type AppView = "library" | "editor";
+
 export interface DragDelta {
   dSec: number;
   dMidi: number;
@@ -18,6 +21,7 @@ export interface DragDelta {
 }
 
 export interface SessionState {
+  view: AppView;
   viewport: Viewport;
   /** Lane width in CSS px, kept up to date by the lanes container */
   laneWidthPx: number;
@@ -45,6 +49,7 @@ export interface SessionState {
   /** Whether the piano roll lane is shown below the waveform */
   showPianoRoll: boolean;
 
+  setView(v: AppView): void;
   setViewport(vp: Viewport): void;
   setLaneWidth(px: number): void;
   setPeaks(p: PeakPyramid | null): void;
@@ -65,6 +70,7 @@ export interface SessionState {
 }
 
 export const useSessionStore = create<SessionState>()((set) => ({
+  view: "library",
   viewport: { pxPerSecond: 100, scrollSec: 0 },
   laneWidthPx: 800,
   peaks: null,
@@ -87,6 +93,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   masterVolume: 1,
   showPianoRoll: false,
 
+  setView: (view) => set({ view }),
   setViewport: (viewport) => set({ viewport }),
   setLaneWidth: (laneWidthPx) => set({ laneWidthPx }),
   setPeaks: (peaks) => set({ peaks }),

@@ -8,8 +8,7 @@ import {
   sliderToZoom,
 } from "../../core/timeline/viewport";
 import {
-  openAudioFile,
-  openProject,
+  backToLibrary,
   saveProject,
   togglePlay,
   stopTransport,
@@ -61,13 +60,11 @@ export function TransportBar(): JSX.Element {
     <div className="transport-bar">
       <div className="tb-group">
         <button
-          onClick={() => void openAudioFile()}
-          title="Open audio file (⌘O)"
+          className="tb-back"
+          onClick={() => void backToLibrary()}
+          title="Back to library"
         >
-          Open Audio
-        </button>
-        <button onClick={() => void openProject()} title="Open project (⌘⇧O)">
-          Open Project
+          ← Library
         </button>
         <button
           onClick={() => void saveProject()}

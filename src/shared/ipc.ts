@@ -17,6 +17,7 @@ export const IPC = {
   openAudioFile: "dialog:openAudioFile",
   readAudioFile: "fs:readAudioFile",
   openProject: "dialog:openProject",
+  readProjectFile: "fs:readProjectFile",
   saveProject: "fs:saveProject",
   saveProjectAs: "dialog:saveProjectAs",
   relinkAudio: "dialog:relinkAudio",
@@ -33,6 +34,10 @@ export interface NotaBridge {
   readAudioFile(absolutePath: string): Promise<OpenAudioResult | null>;
   /** Open file dialog for a .nota project; returns null if cancelled. */
   openProject(): Promise<OpenProjectResult | null>;
+  /** Read a .nota project at a known path; null if missing/unreadable. */
+  readProjectFile(path: string): Promise<string | null>;
+  /** Resolve the absolute path of a dropped/selected File (Electron webUtils). */
+  getPathForFile(file: File): string;
   /** Write project JSON to a known path. */
   saveProject(path: string, json: string): Promise<void>;
   /** Save-as dialog; returns chosen path or null if cancelled. */

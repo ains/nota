@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { IPC, type NotaBridge } from "../shared/ipc";
 
 const nota: NotaBridge = {
@@ -6,6 +6,8 @@ const nota: NotaBridge = {
   readAudioFile: (absolutePath) =>
     ipcRenderer.invoke(IPC.readAudioFile, absolutePath),
   openProject: () => ipcRenderer.invoke(IPC.openProject),
+  readProjectFile: (path) => ipcRenderer.invoke(IPC.readProjectFile, path),
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   saveProject: (path, json) => ipcRenderer.invoke(IPC.saveProject, path, json),
   saveProjectAs: (json, suggestedName) =>
     ipcRenderer.invoke(IPC.saveProjectAs, json, suggestedName),
