@@ -1,0 +1,140 @@
+/**
+ * Document state: notes, loop regions, audio reference.
+ * Undo/redo (zundo) tracks only { notes, loopRegions } — viewport and
+ * playback are not undoable.
+ */
+import { create } from "zustand";
+import { temporal } from "zundo";
+import { nanoid } from "nanoid";
+import type { AudioRef, LoopRegion, Note } from "@shared/types/project";
+
+export interface ProjectState {
+  audio: AudioRef | null;
+  notes: Note[];
+  loopRegions: LoopRegion[];
+  /** Path of the open .nota file, null = never saved */
+  projectPath: string | null;
+  dirty: boolean;
+
+  setAudio(audio: AudioRef | null): void;
+  addNotes(notes: Omit<Note, "id">[]): Note[];
+  updateNotes(updates: Map<string, Partial<Omit<Note, "id">>>): void;
+  deleteNotes(ids: ReadonlySet<string>): void;
+  addLoopRegion(startSec: number, endSec: number): LoopRegion;
+  updateLoopRegion(id: string, patch: Partial<Omit<LoopRegion, "id">>): void;
+  deleteLoopRegion(id: string): void;
+  loadProject(data: {
+    audio: AudioRef;
+    notes: Note[];
+    loopRegions: LoopRegion[];
+    projectPath: string;
+  }): void;
+  newProject(audio: AudioRef): void;
+  markSaved(path: string): void;
+}
+
+export const useProjectStore = create<ProjectState>()(
+  temporal(
+    (set) => ({
+      audio: null,
+      notes: [],
+      loopRegions: [],
+      projectPath: null,
+      dirty: false,
+
+      setAudio: (audio) => set({ audio, dirty: true }),
+
+      addNotes: (newNotes) => {
+        const withIds = newNotes.map((n) => ({ ...n, id: nanoid(10) }));
+        set((s) => ({ notes: [...s.notes, ...withIds], dirty: true }));
+        return withIds;
+      },
+
+      updateNotes: (updates) =>
+        set((s) => ({
+          notes: s.notes.map((n) => {
+            const patch = updates.get(n.id);
+            return patch ? { ...n, ...patch } : n;
+          }),
+          dirty: true,
+        })),
+
+      deleteNotes: (ids) =>
+        set((s) => ({
+          notes: s.notes.filter((n) => !ids.has(n.id)),
+          dirty: true,
+        })),
+
+      addLoopRegion: (startSec, endSec) => {
+        const region: LoopRegion = {
+          id: nanoid(10),
+          name: `Section ${useProjectStore.getState().loopRegions.length + 1}`,
+          startSec,
+          endSec,
+        };
+        set((s) => ({ loopRegions: [...s.loopRegions, region], dirty: true }));
+        return region;
+      },
+
+      updateLoopRegion: (id, patch) =>
+        set((s) => ({
+          loopRegions: s.loopRegions.map((r) =>
+            r.id === id ? { ...r, ...patch } : r,
+          ),
+          dirty: true,
+        })),
+
+      deleteLoopRegion: (id) =>
+        set((s) => ({
+          loopRegions: s.loopRegions.filter((r) => r.id !== id),
+          dirty: true,
+        })),
+
+      loadProject: (data) =>
+        set({
+          audio: data.audio,
+          notes: data.notes,
+          loopRegions: data.loopRegions,
+          projectPath: data.projectPath,
+          dirty: false,
+        }),
+
+      newProject: (audio) =>
+        set({
+          audio,
+          notes: [],
+          loopRegions: [],
+          projectPath: null,
+          dirty: true,
+        }),
+
+      markSaved: (path) => set({ projectPath: path, dirty: false }),
+    }),
+    {
+      partialize: (s) => ({ notes: s.notes, loopRegions: s.loopRegions }),
+      equality: (a, b) =>
+        a.notes === b.notes && a.loopRegions === b.loopRegions,
+      limit: 200,
+    },
+  ),
+);
+
+export const projectTemporal = useProjectStore.temporal;
+
+export function undo(): void {
+  projectTemporal.getState().undo();
+}
+
+export function redo(): void {
+  projectTemporal.getState().redo();
+}
+
+/**
+ * Drags never write intermediate states to the store (the piano roll renders
+ * an ephemeral delta from sessionStore instead), so a completed drag is one
+ * set() and therefore one undo entry. Loading/creating a project clears
+ * history entirely.
+ */
+export function clearHistory(): void {
+  projectTemporal.getState().clear();
+}
