@@ -32,6 +32,8 @@ export class Transport {
   private loop: LoopSpan | null = null;
   /** Where the playhead rests while stopped. */
   private pausedPos = 0;
+  /** Timeline position when the current playback session started. */
+  private playStartPos = 0;
   private listeners = new Set<TransportListener>();
 
   constructor() {
@@ -79,6 +81,7 @@ export class Transport {
   async loadAudio(bytes: ArrayBuffer): Promise<AudioBuffer> {
     this.stopInternal();
     this.pausedPos = 0;
+    this.playStartPos = 0;
     // decodeAudioData detaches the buffer; callers must not reuse `bytes`.
     this.buffer = await this.ctx.decodeAudioData(bytes);
     this.emit();
@@ -117,6 +120,7 @@ export class Transport {
     };
 
     this.startCtx = this.ctx.currentTime + START_DELAY_SEC;
+    this.playStartPos = pos;
     this.songOffset = pos;
     src.start(this.startCtx, pos);
     this.src = src;
@@ -126,8 +130,8 @@ export class Transport {
 
   pause(): void {
     if (this.state !== "playing") return;
-    this.pausedPos = this.posAtCtxTime(this.ctx.currentTime);
     this.stopInternal();
+    this.snapPlayheadToPlayStart();
     this.emit();
   }
 
@@ -186,6 +190,10 @@ export class Transport {
   /** Current playhead position using the plain context clock. */
   get position(): number {
     return this.posAtCtxTime(this.ctx.currentTime);
+  }
+
+  private snapPlayheadToPlayStart(): void {
+    this.pausedPos = this.loop ? this.loop.start : this.playStartPos;
   }
 
   private stopInternal(): void {
