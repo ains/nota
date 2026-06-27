@@ -34,6 +34,22 @@ jobs:
       - name: Capture screenshots
         run: npm run screenshots
 
+      # The artifact runtime token is injected into JS actions but not plain
+      # `run:` steps, so bridge it (and the results URL) into the job env for
+      # the @actions/artifact client to read.
+      - name: Expose artifact runtime env
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable(
+              "ACTIONS_RUNTIME_TOKEN",
+              process.env.ACTIONS_RUNTIME_TOKEN,
+            );
+            core.exportVariable(
+              "ACTIONS_RESULTS_URL",
+              process.env.ACTIONS_RESULTS_URL,
+            );
+
       - name: Upload screenshots artifact
         id: upload
         run: node scripts/upload-artifact.mjs
