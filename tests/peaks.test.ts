@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildPyramid,
   BASE_SAMPLES_PER_BIN,
+  VALUES_PER_BIN,
   levelForZoom,
 } from "@renderer/core/audio/peaks";
 
@@ -16,8 +17,8 @@ describe("peak pyramid", () => {
     expect(base[0]).toBeCloseTo(0);
     expect(base[1]).toBeCloseTo((BASE_SAMPLES_PER_BIN - 1) / n);
     // Last bin max ~ (n-1)/n
-    const lastBin = base.length / 2 - 1;
-    expect(base[lastBin * 2 + 1]).toBeCloseTo((n - 1) / n);
+    const lastBin = base.length / VALUES_PER_BIN - 1;
+    expect(base[lastBin * VALUES_PER_BIN + 1]).toBeCloseTo((n - 1) / n);
   });
 
   it("merges channels with overall min/max", () => {
@@ -41,8 +42,37 @@ describe("peak pyramid", () => {
     const fine = pyramid.levels[0];
     const coarse = pyramid.levels[1];
     // Coarse bin 0 covers fine bins 0..1
-    expect(coarse[0]).toBeLessThanOrEqual(Math.min(fine[0], fine[2]));
-    expect(coarse[1]).toBeGreaterThanOrEqual(Math.max(fine[1], fine[3]));
+    expect(coarse[0]).toBeLessThanOrEqual(
+      Math.min(fine[0], fine[VALUES_PER_BIN]),
+    );
+    expect(coarse[1]).toBeGreaterThanOrEqual(
+      Math.max(fine[1], fine[VALUES_PER_BIN + 1]),
+    );
+    // Coarse RMS is the quadratic mean of the two fine halves.
+    expect(coarse[2]).toBeCloseTo(
+      Math.sqrt(
+        (fine[2] * fine[2] +
+          fine[VALUES_PER_BIN + 2] * fine[VALUES_PER_BIN + 2]) /
+          2,
+      ),
+    );
+  });
+
+  it("computes RMS energy below the peak amplitude", () => {
+    // Full-scale square wave: every sample is ±1, so RMS == peak == 1.
+    const square = new Float32Array(BASE_SAMPLES_PER_BIN);
+    for (let i = 0; i < square.length; i++) square[i] = i % 2 === 0 ? 1 : -1;
+    const squarePyramid = buildPyramid([square], 48000);
+    expect(squarePyramid.levels[0][2]).toBeCloseTo(1);
+
+    // Sine at amplitude 1: RMS settles to 1/√2 ≈ 0.707, well below the peak.
+    const n = BASE_SAMPLES_PER_BIN * 64;
+    const sine = new Float32Array(n);
+    for (let i = 0; i < n; i++) sine[i] = Math.sin((2 * Math.PI * i) / 32);
+    const sinePyramid = buildPyramid([sine], 48000);
+    const coarsest = sinePyramid.levels[sinePyramid.levels.length - 1];
+    expect(coarsest[1]).toBeCloseTo(1, 1); // peak ≈ 1
+    expect(coarsest[2]).toBeCloseTo(Math.SQRT1_2, 1); // rms ≈ 0.707
   });
 
   it("levelForZoom picks coarser levels when zoomed out", () => {

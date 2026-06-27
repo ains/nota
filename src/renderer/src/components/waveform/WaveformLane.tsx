@@ -6,6 +6,7 @@ import {
   levelForZoom,
   secondsPerBin,
   binsForLevel,
+  VALUES_PER_BIN,
 } from "../../core/audio/peaks";
 import { pxToSec } from "../../core/timeline/viewport";
 import { useCanvas } from "../useCanvas";
@@ -29,25 +30,37 @@ export function WaveformLane(): JSX.Element {
     const mid = h / 2;
     const amp = (h / 2) * 0.92;
 
-    ctx.fillStyle = "#15140f";
-    ctx.globalAlpha = 0.82;
     const firstBin = Math.max(0, Math.floor(viewport.scrollSec / binSec));
     const lastBin = Math.min(
       bins - 1,
       Math.ceil(pxToSec(viewport, w) / binSec),
     );
+    const wPx = Math.max(
+      binSec * viewport.pxPerSecond,
+      1 / (window.devicePixelRatio || 1),
+    );
+
+    // RMS values for music are small in absolute terms, so normalize against
+    // the loudest bin in the level — that one fills the lane and the rest scale
+    // proportionally. Scanning the whole level (not just the visible window)
+    // keeps the vertical scale stable while scrolling.
+    let maxRms = 0;
+    for (let b = 0; b < bins; b++) {
+      const rms = data[b * VALUES_PER_BIN + 2];
+      if (rms > maxRms) maxRms = rms;
+    }
+    const rmsScale = maxRms > 0 ? (amp * 2) / maxRms : 0;
+
+    // RMS body: average energy, drawn symmetrically about the center line.
+    // Averaging out isolated spikes reveals the actual musical dynamics.
+    ctx.fillStyle = "#15140f";
+    ctx.globalAlpha = 0.85;
     ctx.beginPath();
     for (let b = firstBin; b <= lastBin; b++) {
       const x = (b * binSec - viewport.scrollSec) * viewport.pxPerSecond;
-      const wPx = Math.max(
-        binSec * viewport.pxPerSecond,
-        1 / (window.devicePixelRatio || 1),
-      );
-      const min = data[b * 2];
-      const max = data[b * 2 + 1];
-      const y = mid - max * amp;
-      const hPx = Math.max((max - min) * amp, 1);
-      ctx.rect(x, y, wPx, hPx);
+      const rms = data[b * VALUES_PER_BIN + 2];
+      const hPx = Math.max(rms * rmsScale, 1);
+      ctx.rect(x, mid - hPx / 2, wPx, hPx);
     }
     ctx.fill();
     ctx.globalAlpha = 1;
