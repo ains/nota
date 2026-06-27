@@ -215,18 +215,18 @@ function App(): JSX.Element {
       <div className="editor-body">
         <div className="timeline-area" ref={lanesRef}>
           <div className="lane-row" style={{ height: 26 }}>
-            <div className="gutter-spacer" />
+            {showPianoRoll && <div className="gutter-spacer" />}
             <TimeRuler />
           </div>
           <div className="lane-row" style={{ height: 24 }}>
-            <div className="gutter-spacer" />
+            {showPianoRoll && <div className="gutter-spacer" />}
             <LoopLane />
           </div>
           <div
             className="lane-row"
             style={showPianoRoll ? { height: 130 } : { flex: 1, minHeight: 0 }}
           >
-            <div className="gutter-spacer" />
+            {showPianoRoll && <div className="gutter-spacer" />}
             <WaveformLane />
           </div>
           <RollToggleBar />
