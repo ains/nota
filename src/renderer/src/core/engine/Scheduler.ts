@@ -77,13 +77,14 @@ export class Scheduler {
 
     const ctx = this.transport.ctx;
     const { startCtx, songOffset } = this.transport.anchor;
+    const speed = this.transport.speed;
     const loop = this.transport.loopSpan;
     const now = ctx.currentTime;
     const horizon = now + SCHEDULE_AHEAD_SEC;
 
     if (!loop) {
       for (const note of this.notes) {
-        const ctxOn = startCtx + (note.onsetSec - songOffset);
+        const ctxOn = startCtx + (note.onsetSec - songOffset) / speed;
         if (ctxOn >= horizon) break;
         if (ctxOn < now - 0.02) continue;
         this.issue(note, 0, ctxOn);
@@ -95,8 +96,8 @@ export class Scheduler {
     const len = Le - Ls;
     // Pass k occupies elapsed range [k·len + (Ls − songOffset), …): find the
     // passes whose ctx-time window intersects [now, horizon).
-    const elapsedNow = now - startCtx;
-    const elapsedHorizon = horizon - startCtx;
+    const elapsedNow = (now - startCtx) * speed;
+    const elapsedHorizon = (horizon - startCtx) * speed;
     const kMin = Math.max(0, Math.floor((elapsedNow + songOffset - Le) / len));
     const kMax = Math.ceil((elapsedHorizon + songOffset - Ls) / len);
 
@@ -105,7 +106,7 @@ export class Scheduler {
         if (note.onsetSec < Ls || note.onsetSec >= Le) continue;
         // First pass (k=0) plays from songOffset, which may start mid-loop.
         if (k === 0 && note.onsetSec < songOffset) continue;
-        const ctxOn = startCtx + (note.onsetSec - songOffset) + k * len;
+        const ctxOn = startCtx + (note.onsetSec - songOffset + k * len) / speed;
         if (ctxOn < now - 0.02 || ctxOn >= horizon) continue;
         this.issue(note, k, ctxOn);
       }
@@ -121,7 +122,7 @@ export class Scheduler {
       note.midi,
       note.velocity,
       ctxOn,
-      note.durationSec,
+      note.durationSec / this.transport.speed,
     );
   }
 }

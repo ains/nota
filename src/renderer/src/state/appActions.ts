@@ -301,6 +301,11 @@ export function setMasterVolume(volume: number): void {
   useSessionStore.getState().setMasterVolume(volume);
 }
 
+export function setPlaybackSpeed(speed: number): void {
+  engine.transport.setPlaybackSpeed(speed);
+  useSessionStore.getState().setPlaybackSpeed(engine.transport.speed);
+}
+
 /** Zoom to an absolute pxPerSecond, keeping the centre of the view fixed. */
 export function setZoom(pxPerSecond: number): void {
   const session = useSessionStore.getState();

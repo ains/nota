@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { JSX } from "react";
 import { useSessionStore } from "../../state/sessionStore";
+import { PLAYBACK_SPEEDS } from "../../core/engine/Transport";
 import { useProjectStore } from "../../state/projectStore";
 import {
   formatTime,
@@ -17,6 +18,7 @@ import {
   setAudioMuted,
   setSynthMuted,
   setMasterVolume,
+  setPlaybackSpeed,
   setZoom,
   selectMidiDevice,
   retryMidi,
@@ -48,6 +50,7 @@ export function TransportBar(): JSX.Element {
   const audioMuted = useSessionStore((s) => s.audioMuted);
   const synthMuted = useSessionStore((s) => s.synthMuted);
   const masterVolume = useSessionStore((s) => s.masterVolume);
+  const playbackSpeed = useSessionStore((s) => s.playbackSpeed);
   const pxPerSecond = useSessionStore((s) => s.viewport.pxPerSecond);
   const midiError = useSessionStore((s) => s.midiError);
   const hasAudio = useProjectStore((s) => s.audio !== null);
@@ -119,6 +122,20 @@ export function TransportBar(): JSX.Element {
             value={zoomToSlider(pxPerSecond)}
             onChange={(e) => setZoom(sliderToZoom(Number(e.target.value)))}
           />
+        </label>
+        <label className="tb-speed" title="Playback speed (preserves pitch)">
+          Speed
+          <select
+            value={playbackSpeed}
+            onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
+            disabled={!hasAudio}
+          >
+            {PLAYBACK_SPEEDS.map((speed) => (
+              <option key={speed} value={speed}>
+                {speed}×
+              </option>
+            ))}
+          </select>
         </label>
         <label className="tb-slider" title="Volume">
           Vol

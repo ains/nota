@@ -225,7 +225,8 @@ select {
   color: var(--text-dim);
 }
 
-.tb-slider {
+.tb-slider,
+.tb-speed {
   display: flex;
   align-items: center;
   gap: 5px;

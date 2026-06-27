@@ -2,10 +2,9 @@
  * Owns the AudioContext, the decoded source audio, and the playback anchor
  * state (startCtx, songOffset, loop). All timeline math flows through here.
  *
- * Anchor rule: playback always starts with an explicit FUTURE context time
- * passed to source.start(startCtx, songOffset) — never "currentTime at the
- * moment start() was called" — so the anchor is sample-accurate by
- * construction.
+ * Anchor rule: playback always starts against an explicit FUTURE context time;
+ * timeline consumers map against that anchor rather than "currentTime at the
+ * moment play() was called" so speed-aware playhead/scheduler math is stable.
  */
 
 export interface LoopSpan {
@@ -17,12 +16,17 @@ export type TransportState = "stopped" | "playing";
 
 export type TransportListener = () => void;
 
+export const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+
 const START_DELAY_SEC = 0.1;
 
 export class Transport {
   readonly ctx: AudioContext;
   private buffer: AudioBuffer | null = null;
-  private src: AudioBufferSourceNode | null = null;
+  private audioEl: HTMLAudioElement | null = null;
+  private mediaSrc: MediaElementAudioSourceNode | null = null;
+  private objectUrl: string | null = null;
+  private startTimer: ReturnType<typeof setTimeout> | null = null;
   readonly masterGain: GainNode;
   readonly audioGain: GainNode;
 
@@ -34,6 +38,7 @@ export class Transport {
   private pausedPos = 0;
   /** Timeline position when the current playback session started. */
   private playStartPos = 0;
+  private playbackSpeed = 1;
   private listeners = new Set<TransportListener>();
 
   constructor() {
@@ -52,6 +57,10 @@ export class Transport {
 
   get audioBuffer(): AudioBuffer | null {
     return this.buffer;
+  }
+
+  get speed(): number {
+    return this.playbackSpeed;
   }
 
   get durationSec(): number {
@@ -80,10 +89,21 @@ export class Transport {
 
   async loadAudio(bytes: ArrayBuffer): Promise<AudioBuffer> {
     this.stopInternal();
+    this.revokeObjectUrl();
     this.pausedPos = 0;
     this.playStartPos = 0;
     // decodeAudioData detaches the buffer; callers must not reuse `bytes`.
+    const copy = bytes.slice(0);
     this.buffer = await this.ctx.decodeAudioData(bytes);
+    this.objectUrl = URL.createObjectURL(new Blob([copy]));
+    this.audioEl = new Audio(this.objectUrl);
+    this.audioEl.preload = "auto";
+    this.audioEl.preservesPitch = true;
+    this.audioEl.playbackRate = this.playbackSpeed;
+    this.audioEl.addEventListener("ended", this.handleEnded);
+    this.audioEl.addEventListener("timeupdate", this.enforceLoop);
+    this.mediaSrc = this.ctx.createMediaElementSource(this.audioEl);
+    this.mediaSrc.connect(this.audioGain);
     this.emit();
     return this.buffer;
   }
@@ -102,28 +122,26 @@ export class Transport {
     }
     pos = Math.min(Math.max(pos, 0), this.buffer.duration);
 
-    const src = new AudioBufferSourceNode(this.ctx, { buffer: this.buffer });
-    if (this.loop) {
-      src.loop = true;
-      src.loopStart = this.loop.start;
-      src.loopEnd = this.loop.end;
-    }
-    src.connect(this.audioGain);
-    src.onended = () => {
-      // Natural end of (non-looping) playback.
-      if (this.src === src && this.state === "playing") {
-        this.pausedPos = this.buffer?.duration ?? 0;
-        this.src = null;
-        this.state = "stopped";
-        this.emit();
-      }
-    };
+    const el = this.audioEl;
+    if (!el) return;
+    el.pause();
+    el.currentTime = pos;
+    el.playbackRate = this.playbackSpeed;
+    el.preservesPitch = true;
 
     this.startCtx = this.ctx.currentTime + START_DELAY_SEC;
     this.playStartPos = pos;
     this.songOffset = pos;
-    src.start(this.startCtx, pos);
-    this.src = src;
+    this.startTimer = setTimeout(() => {
+      void el.play().catch((err: unknown) => {
+        console.error("Audio playback failed:", err);
+        if (this.audioEl === el) {
+          this.state = "stopped";
+          this.emit();
+        }
+      });
+      this.startTimer = null;
+    }, START_DELAY_SEC * 1000);
     this.state = "playing";
     this.emit();
   }
@@ -167,6 +185,24 @@ export class Transport {
     this.audioGain.gain.value = muted ? 0 : 1;
   }
 
+  setPlaybackSpeed(speed: number): void {
+    const clamped = Math.min(4, Math.max(0.25, speed));
+    if (clamped === this.playbackSpeed) return;
+    const wasPlaying = this.state === "playing";
+    const pos = this.position;
+    this.playbackSpeed = clamped;
+    if (this.audioEl) {
+      this.audioEl.playbackRate = clamped;
+      this.audioEl.preservesPitch = true;
+    }
+    if (wasPlaying) {
+      void this.play(pos);
+    } else {
+      this.pausedPos = pos;
+      this.emit();
+    }
+  }
+
   /** Master output volume (0..1), applied to audio + synth alike. */
   setVolume(volume: number): void {
     this.masterGain.gain.value = volume;
@@ -180,7 +216,7 @@ export class Transport {
    */
   posAtCtxTime(c: number): number {
     if (this.state !== "playing") return this.pausedPos;
-    const e = this.songOffset + (c - this.startCtx);
+    const e = this.songOffset + (c - this.startCtx) * this.playbackSpeed;
     if (!this.loop) return Math.min(Math.max(e, 0), this.durationSec);
     const { start: Ls, end: Le } = this.loop;
     if (e <= Le) return Math.max(e, 0);
@@ -196,17 +232,44 @@ export class Transport {
     this.pausedPos = this.loop ? this.loop.start : this.playStartPos;
   }
 
-  private stopInternal(): void {
-    if (this.src) {
-      this.src.onended = null;
-      try {
-        this.src.stop();
-      } catch {
-        // already stopped
-      }
-      this.src.disconnect();
-      this.src = null;
-    }
+  private handleEnded = (): void => {
+    if (this.state !== "playing") return;
+    this.pausedPos = this.buffer?.duration ?? 0;
     this.state = "stopped";
+    this.emit();
+  };
+
+  private enforceLoop = (): void => {
+    if (this.state !== "playing" || !this.loop || !this.audioEl) return;
+    if (this.audioEl.currentTime >= this.loop.end) {
+      this.audioEl.currentTime = this.loop.start;
+    }
+  };
+
+  private stopInternal(): void {
+    if (this.startTimer) {
+      clearTimeout(this.startTimer);
+      this.startTimer = null;
+    }
+    if (this.audioEl) this.audioEl.pause();
+    this.state = "stopped";
+  }
+
+  private revokeObjectUrl(): void {
+    if (this.audioEl) {
+      this.audioEl.removeEventListener("ended", this.handleEnded);
+      this.audioEl.removeEventListener("timeupdate", this.enforceLoop);
+      this.audioEl.pause();
+      this.audioEl.src = "";
+      this.audioEl = null;
+    }
+    if (this.mediaSrc) {
+      this.mediaSrc.disconnect();
+      this.mediaSrc = null;
+    }
+    if (this.objectUrl) {
+      URL.revokeObjectURL(this.objectUrl);
+      this.objectUrl = null;
+    }
   }
 }

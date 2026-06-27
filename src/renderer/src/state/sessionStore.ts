@@ -46,6 +46,8 @@ export interface SessionState {
   synthMuted: boolean;
   /** Master output volume, 0..1 */
   masterVolume: number;
+  /** Audio timeline playback speed multiplier. */
+  playbackSpeed: number;
   /** Whether the piano roll lane is shown below the waveform */
   showPianoRoll: boolean;
 
@@ -66,6 +68,7 @@ export interface SessionState {
   setAudioMuted(b: boolean): void;
   setSynthMuted(b: boolean): void;
   setMasterVolume(v: number): void;
+  setPlaybackSpeed(v: number): void;
   setShowPianoRoll(b: boolean): void;
 }
 
@@ -91,6 +94,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   audioMuted: false,
   synthMuted: false,
   masterVolume: 1,
+  playbackSpeed: 1,
   showPianoRoll: false,
 
   setView: (view) => set({ view }),
@@ -111,6 +115,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   setAudioMuted: (audioMuted) => set({ audioMuted }),
   setSynthMuted: (synthMuted) => set({ synthMuted }),
   setMasterVolume: (masterVolume) => set({ masterVolume }),
+  setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
   setShowPianoRoll: (showPianoRoll) => set({ showPianoRoll }),
 }));
 
