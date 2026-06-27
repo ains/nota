@@ -242,12 +242,6 @@ select {
   border-color: var(--accent-warm);
 }
 
-.tb-path {
-  font-size: 11px;
-  color: var(--text-dim);
-  width: 100%;
-}
-
 /* ---- editor body (timeline + side drawer) ---- */
 
 .editor-body {
