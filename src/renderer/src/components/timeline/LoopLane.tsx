@@ -1,10 +1,15 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useSessionStore } from "../../state/sessionStore";
 import { useProjectStore } from "../../state/projectStore";
 import { secToPx, pxToSec } from "../../core/timeline/viewport";
 import { useTimelineWheel } from "./useTimelineWheel";
-import { setActiveLoop, refreshActiveLoop } from "../../state/appActions";
+import {
+  setActiveLoop,
+  refreshActiveLoop,
+  commitPendingRegion,
+  discardPendingRegion,
+} from "../../state/appActions";
 
 const MIN_REGION_SEC = 0.25;
 
@@ -12,10 +17,25 @@ const MIN_REGION_SEC = 0.25;
 export function LoopLane(): JSX.Element {
   const viewport = useSessionStore((s) => s.viewport);
   const activeLoopId = useSessionStore((s) => s.activeLoopId);
+  const pendingRegion = useSessionStore((s) => s.pendingRegion);
   const regions = useProjectStore((s) => s.loopRegions);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const pendingRef = useRef<HTMLDivElement | null>(null);
   useTimelineWheel(containerRef);
   const [draft, setDraft] = useState<{ a: number; b: number } | null>(null);
+
+  // While a pending region is shown, a click anywhere outside it discards it.
+  const hasPending = pendingRegion !== null;
+  useEffect(() => {
+    if (!hasPending) return;
+    const onDown = (e: PointerEvent): void => {
+      const el = pendingRef.current;
+      if (el && e.target instanceof Node && el.contains(e.target)) return;
+      discardPendingRegion();
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [hasPending]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
     if (e.target !== e.currentTarget) return;
@@ -95,6 +115,23 @@ export function LoopLane(): JSX.Element {
             width: Math.abs(draft.b - draft.a) * viewport.pxPerSecond,
           }}
         />
+      )}
+      {pendingRegion && (
+        <div
+          ref={pendingRef}
+          className="loop-region pending"
+          style={{
+            left: secToPx(viewport, pendingRegion.startSec),
+            width:
+              (pendingRegion.endSec - pendingRegion.startSec) *
+              viewport.pxPerSecond,
+          }}
+          title="Click to save as a section"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={commitPendingRegion}
+        >
+          <span className="loop-name">Click to save</span>
+        </div>
       )}
     </div>
   );

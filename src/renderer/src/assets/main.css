@@ -372,6 +372,31 @@ select {
   pointer-events: none;
 }
 
+/* Ephemeral region sketched on the waveform, awaiting save. Mirrors the loop
+   lane's drag selection (dashed outline) but stays interactive so it can be
+   clicked to save. */
+.loop-region.pending {
+  background: rgba(21, 20, 15, 0.04);
+  border-style: dashed;
+}
+
+.loop-region.pending .loop-name {
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* Highlight band over the portion of the waveform covered by the pending
+   region. */
+.waveform-selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(21, 20, 15, 0.1);
+  border-left: 1px dashed var(--ink);
+  border-right: 1px dashed var(--ink);
+  pointer-events: none;
+}
+
 .loop-name {
   padding: 0 4px;
   overflow: hidden;

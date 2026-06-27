@@ -239,7 +239,10 @@ function App(): JSX.Element {
               </div>
             </>
           )}
-          <div className="playhead-clip">
+          <div
+            className="playhead-clip"
+            style={showPianoRoll ? undefined : { left: 0 }}
+          >
             <Playhead />
           </div>
         </div>
