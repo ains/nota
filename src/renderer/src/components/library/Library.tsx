@@ -6,6 +6,7 @@ import {
   type RecentProject,
 } from "../../persistence/recentProjects";
 import {
+  openProject,
   openProjectByPath,
   createProjectFromAudioFile,
 } from "../../state/appActions";
@@ -54,36 +55,40 @@ export function Library(): JSX.Element {
     >
       <h1 className="library-title">Library</h1>
       <p className="library-hint">
-        Drag an audio file here to start a new project.
+        Drag an audio file here to start a new project, or open an existing one.
       </p>
 
-      {recents.length === 0 ? (
-        <div className="library-empty">No projects yet.</div>
-      ) : (
-        <div className="library-grid">
-          {recents.map((p) => (
-            <button
-              key={p.path}
-              className="project-card"
-              onClick={() => void openProjectByPath(p.path)}
-              title={p.path}
+      <div className="library-grid">
+        <button
+          className="project-card project-card-open"
+          onClick={() => void openProject()}
+          title="Browse for a project file"
+        >
+          <span className="project-name">Open project…</span>
+          <span className="project-audio">Browse for a .nota file</span>
+        </button>
+        {recents.map((p) => (
+          <button
+            key={p.path}
+            className="project-card"
+            onClick={() => void openProjectByPath(p.path)}
+            title={p.path}
+          >
+            <span className="project-name">{p.name}</span>
+            <span className="project-audio">{p.audioFileName}</span>
+            <span className="project-date">
+              {new Date(p.lastOpened).toLocaleDateString()}
+            </span>
+            <span
+              className="project-remove"
+              title="Remove from library"
+              onClick={(e) => remove(e, p.path)}
             >
-              <span className="project-name">{p.name}</span>
-              <span className="project-audio">{p.audioFileName}</span>
-              <span className="project-date">
-                {new Date(p.lastOpened).toLocaleDateString()}
-              </span>
-              <span
-                className="project-remove"
-                title="Remove from library"
-                onClick={(e) => remove(e, p.path)}
-              >
-                ×
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+              ×
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

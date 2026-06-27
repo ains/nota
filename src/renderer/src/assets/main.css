@@ -125,10 +125,6 @@ select {
   color: var(--text-dim);
 }
 
-.library-empty {
-  color: var(--text-dim);
-}
-
 .library-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -152,6 +148,21 @@ select {
   background: var(--bg-panel);
   color: var(--text);
   box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* The "open a project" affordance reads as a placeholder card: a dotted
+   outline and faded ink set it apart from the solid recent-project cards. */
+.project-card-open {
+  border-style: dotted;
+  color: var(--text-dim);
+}
+
+.project-card-open .project-name {
+  color: var(--text-dim);
+}
+
+.project-card-open:hover:not(:disabled) .project-name {
+  color: var(--text);
 }
 
 .project-name {
