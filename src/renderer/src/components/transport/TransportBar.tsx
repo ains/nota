@@ -48,7 +48,6 @@ export function TransportBar(): JSX.Element {
   const midiError = useSessionStore((s) => s.midiError);
   const hasAudio = useProjectStore((s) => s.audio !== null);
   const dirty = useProjectStore((s) => s.dirty);
-  const projectPath = useProjectStore((s) => s.projectPath);
 
   const hasTake = takeNotes.length > 0 && !isRecording;
 
@@ -151,10 +150,6 @@ export function TransportBar(): JSX.Element {
           </select>
         )}
       </div>
-
-      {projectPath && (
-        <span className="tb-path">{projectPath.split("/").pop()}</span>
-      )}
     </div>
   );
 }

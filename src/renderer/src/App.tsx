@@ -119,10 +119,17 @@ function App(): JSX.Element {
   const view = useSessionStore((s) => s.view);
   const showPianoRoll = useSessionStore((s) => s.showPianoRoll);
   const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
+  const projectPath = useProjectStore((s) => s.projectPath);
 
   useEffect(() => {
     initEngineBindings();
   }, []);
+
+  // Reflect the open project's filename in the window title bar.
+  useEffect(() => {
+    const name = projectPath?.split("/").pop();
+    document.title = name ? `Nota — ${name}` : "Nota";
+  }, [projectPath]);
 
   // Track lane width for viewport clamping.
   useEffect(() => {
