@@ -10,6 +10,7 @@ import { WaveformLane } from "./components/waveform/WaveformLane";
 import { PianoRoll } from "./components/pianoroll/PianoRoll";
 import { KeysGutter } from "./components/pianoroll/KeysGutter";
 import { RollOptionsBar } from "./components/pianoroll/RollOptionsBar";
+import { VolumeDrawer } from "./components/volume/VolumeDrawer";
 import { Library } from "./components/library/Library";
 import {
   initEngineBindings,
@@ -118,10 +119,18 @@ function App(): JSX.Element {
   const lanesRef = useRef<HTMLDivElement | null>(null);
   const view = useSessionStore((s) => s.view);
   const showPianoRoll = useSessionStore((s) => s.showPianoRoll);
+  const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
+  const projectPath = useProjectStore((s) => s.projectPath);
 
   useEffect(() => {
     initEngineBindings();
   }, []);
+
+  // Reflect the open project's filename in the window title bar.
+  useEffect(() => {
+    const name = projectPath?.split("/").pop();
+    document.title = name ? `Nota — ${name}` : "Nota";
+  }, [projectPath]);
 
   // Track lane width for viewport clamping.
   useEffect(() => {
@@ -203,35 +212,38 @@ function App(): JSX.Element {
   return (
     <div className="app">
       <TransportBar />
-      <div className="timeline-area" ref={lanesRef}>
-        <div className="lane-row" style={{ height: 26 }}>
-          <div className="gutter-spacer" />
-          <TimeRuler />
+      <div className="editor-body">
+        <div className="timeline-area" ref={lanesRef}>
+          <div className="lane-row" style={{ height: 26 }}>
+            <div className="gutter-spacer" />
+            <TimeRuler />
+          </div>
+          <div className="lane-row" style={{ height: 24 }}>
+            <div className="gutter-spacer" />
+            <LoopLane />
+          </div>
+          <div
+            className="lane-row"
+            style={showPianoRoll ? { height: 130 } : { flex: 1, minHeight: 0 }}
+          >
+            <div className="gutter-spacer" />
+            <WaveformLane />
+          </div>
+          <RollToggleBar />
+          {showPianoRoll && (
+            <>
+              <RollOptionsBar />
+              <div className="roll-scroll">
+                <KeysGutter />
+                <PianoRoll />
+              </div>
+            </>
+          )}
+          <div className="playhead-clip">
+            <Playhead />
+          </div>
         </div>
-        <div className="lane-row" style={{ height: 24 }}>
-          <div className="gutter-spacer" />
-          <LoopLane />
-        </div>
-        <div
-          className="lane-row"
-          style={showPianoRoll ? { height: 130 } : { flex: 1, minHeight: 0 }}
-        >
-          <div className="gutter-spacer" />
-          <WaveformLane />
-        </div>
-        <RollToggleBar />
-        {showPianoRoll && (
-          <>
-            <RollOptionsBar />
-            <div className="roll-scroll">
-              <KeysGutter />
-              <PianoRoll />
-            </div>
-          </>
-        )}
-        <div className="playhead-clip">
-          <Playhead />
-        </div>
+        {showVolumeDrawer && <VolumeDrawer />}
       </div>
       <BottomBar />
       <NudgeHud />

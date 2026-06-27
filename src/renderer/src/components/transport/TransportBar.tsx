@@ -10,9 +10,6 @@ import {
   stopTransport,
   commitTake,
   discardTake,
-  setAudioMuted,
-  setSynthMuted,
-  setMasterVolume,
   selectMidiDevice,
   retryMidi,
   getEngineRef,
@@ -40,13 +37,11 @@ export function TransportBar(): JSX.Element {
   const takeNotes = useSessionStore((s) => s.takeNotes);
   const midiDevices = useSessionStore((s) => s.midiDevices);
   const activeMidiId = useSessionStore((s) => s.activeMidiDeviceId);
-  const audioMuted = useSessionStore((s) => s.audioMuted);
-  const synthMuted = useSessionStore((s) => s.synthMuted);
-  const masterVolume = useSessionStore((s) => s.masterVolume);
+  const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
+  const setShowVolumeDrawer = useSessionStore((s) => s.setShowVolumeDrawer);
   const midiError = useSessionStore((s) => s.midiError);
   const hasAudio = useProjectStore((s) => s.audio !== null);
   const dirty = useProjectStore((s) => s.dirty);
-  const projectPath = useProjectStore((s) => s.projectPath);
 
   const hasTake = takeNotes.length > 0 && !isRecording;
 
@@ -103,36 +98,13 @@ export function TransportBar(): JSX.Element {
       </div>
 
       <div className="tb-group tb-right">
-        <label className="tb-slider" title="Volume">
-          Vol
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={masterVolume}
-            onChange={(e) => setMasterVolume(Number(e.target.value))}
-          />
-        </label>
-      </div>
-
-      <div className="tb-group tb-right">
-        <label className="tb-check">
-          <input
-            type="checkbox"
-            checked={!audioMuted}
-            onChange={(e) => setAudioMuted(!e.target.checked)}
-          />
-          Audio
-        </label>
-        <label className="tb-check">
-          <input
-            type="checkbox"
-            checked={!synthMuted}
-            onChange={(e) => setSynthMuted(!e.target.checked)}
-          />
-          Synth
-        </label>
+        <button
+          className={showVolumeDrawer ? "tb-mixer active" : "tb-mixer"}
+          onClick={() => setShowVolumeDrawer(!showVolumeDrawer)}
+          title={showVolumeDrawer ? "Hide volume panel" : "Show volume panel"}
+        >
+          🎚 Audio controls
+        </button>
         {midiError ? (
           <button
             className="tb-midi-error"
@@ -158,10 +130,6 @@ export function TransportBar(): JSX.Element {
           </select>
         )}
       </div>
-
-      {projectPath && (
-        <span className="tb-path">{projectPath.split("/").pop()}</span>
-      )}
     </div>
   );
 }

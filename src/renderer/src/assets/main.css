@@ -242,10 +242,12 @@ select {
   border-color: var(--accent-warm);
 }
 
-.tb-path {
-  font-size: 11px;
-  color: var(--text-dim);
-  width: 100%;
+/* ---- editor body (timeline + side drawer) ---- */
+
+.editor-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
 /* ---- timeline area ---- */
@@ -255,6 +257,7 @@ select {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
   background: var(--bg-lane);
 }
@@ -428,6 +431,72 @@ select {
   background: var(--accent-warm);
   box-shadow: 0 0 4px rgba(255, 209, 102, 0.6);
   will-change: transform;
+}
+
+/* ---- volume drawer ---- */
+
+.tb-mixer.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.volume-drawer {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 14px 16px;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.vd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.vd-close {
+  border: none;
+  background: none;
+  padding: 0 4px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-dim);
+}
+
+.vd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.vd-row-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.vd-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.vd-row input[type="range"] {
+  width: 100%;
+}
+
+.vd-row input[type="range"]:disabled {
+  opacity: 0.4;
 }
 
 /* ---- nudge HUD ---- */
