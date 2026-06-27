@@ -25,6 +25,11 @@ export class Transport {
   private src: AudioBufferSourceNode | null = null;
   readonly masterGain: GainNode;
   readonly audioGain: GainNode;
+  readonly synthGain: GainNode;
+
+  /** Music mute/volume are composed onto audioGain; keep both to recombine. */
+  private audioMuted = false;
+  private audioVolume = 1;
 
   private state: TransportState = "stopped";
   private startCtx = 0;
@@ -42,6 +47,8 @@ export class Transport {
     this.masterGain.connect(this.ctx.destination);
     this.audioGain = this.ctx.createGain();
     this.audioGain.connect(this.masterGain);
+    this.synthGain = this.ctx.createGain();
+    this.synthGain.connect(this.masterGain);
   }
 
   // --- state ---
@@ -164,7 +171,23 @@ export class Transport {
   }
 
   setAudioMuted(muted: boolean): void {
-    this.audioGain.gain.value = muted ? 0 : 1;
+    this.audioMuted = muted;
+    this.applyAudioGain();
+  }
+
+  /** Music (audio file) playback volume (0..1), independent of mute. */
+  setMusicVolume(volume: number): void {
+    this.audioVolume = volume;
+    this.applyAudioGain();
+  }
+
+  private applyAudioGain(): void {
+    this.audioGain.gain.value = this.audioMuted ? 0 : this.audioVolume;
+  }
+
+  /** Synth (sampler) playback volume (0..1). */
+  setSynthVolume(volume: number): void {
+    this.synthGain.gain.value = volume;
   }
 
   /** Master output volume (0..1), applied to audio + synth alike. */

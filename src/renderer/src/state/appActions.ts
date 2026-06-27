@@ -33,7 +33,10 @@ export function initEngineBindings(): void {
     useSessionStore.getState().setIsPlaying(engine.transport.isPlaying);
   });
 
-  engine.scheduler.setMuted(useSessionStore.getState().synthMuted);
+  const session = useSessionStore.getState();
+  engine.scheduler.setMuted(session.synthMuted);
+  engine.transport.setMusicVolume(session.musicVolume);
+  engine.transport.setSynthVolume(session.synthVolume);
 
   // Keep the playback scheduler's note list in sync with the document.
   engine.scheduler.setNotes(useProjectStore.getState().notes);
@@ -296,9 +299,14 @@ export function setSynthMuted(muted: boolean): void {
   useSessionStore.getState().setSynthMuted(muted);
 }
 
-export function setMasterVolume(volume: number): void {
-  engine.transport.setVolume(volume);
-  useSessionStore.getState().setMasterVolume(volume);
+export function setMusicVolume(volume: number): void {
+  engine.transport.setMusicVolume(volume);
+  useSessionStore.getState().setMusicVolume(volume);
+}
+
+export function setSynthVolume(volume: number): void {
+  engine.transport.setSynthVolume(volume);
+  useSessionStore.getState().setSynthVolume(volume);
 }
 
 /** Zoom to an absolute pxPerSecond, keeping the centre of the view fixed. */
