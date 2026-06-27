@@ -29,12 +29,12 @@ export function KeysGutter(): JSX.Element {
     for (let midi = MIDI_LOW; midi <= MIDI_HIGH; midi++) {
       const y = midiToY(midi);
       const black = BLACK_KEYS.has(midi % 12);
-      ctx.fillStyle = black ? "#22242e" : "#e8e8ee";
+      ctx.fillStyle = black ? "#15140f" : "#fbfaf6";
       ctx.fillRect(0, y, w, ROW_H);
-      ctx.strokeStyle = "rgba(0,0,0,0.4)";
+      ctx.strokeStyle = "rgba(21,20,15,0.35)";
       ctx.strokeRect(0, y + 0.5, w, ROW_H);
       if (midi % 12 === 0) {
-        ctx.fillStyle = "#555";
+        ctx.fillStyle = "#8a877b";
         ctx.font = "8px system-ui, sans-serif";
         ctx.textBaseline = "middle";
         ctx.fillText(`${NOTE_NAMES[0]}${midi / 12 - 1}`, w - 18, y + ROW_H / 2);
