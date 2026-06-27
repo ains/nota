@@ -19,9 +19,10 @@ import {
 
 const RESIZE_GRIP_PX = 6;
 
-const NOTE_COLOR = "#5fb0f9";
-const NOTE_SELECTED_COLOR = "#ffd166";
-const TAKE_GHOST_COLOR = "#9fdf9f";
+// Monochrome notation: committed notes are filled ink heads; selected notes are
+// drawn as open (outlined) heads — quarter vs. half note — and takes are pencil.
+const NOTE_COLOR = "#15140f";
+const TAKE_GHOST_COLOR = "#15140f";
 
 type DragState =
   | { kind: "move" | "resize"; startX: number; startY: number; moved: boolean }
@@ -50,11 +51,11 @@ export function PianoRoll(): JSX.Element {
       const y = midiToY(midi);
       if (y > h) continue;
       ctx.fillStyle = BLACK_KEYS.has(midi % 12)
-        ? "rgba(0,0,0,0.25)"
-        : "rgba(255,255,255,0.02)";
+        ? "rgba(21,20,15,0.05)"
+        : "rgba(0,0,0,0)";
       ctx.fillRect(0, y, w, ROW_H);
       if (midi % 12 === 0) {
-        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.strokeStyle = "rgba(21,20,15,0.18)";
         ctx.beginPath();
         ctx.moveTo(0, y + ROW_H);
         ctx.lineTo(w, y + ROW_H);
@@ -87,8 +88,7 @@ export function PianoRoll(): JSX.Element {
     for (const note of notes) {
       const selected = selection.has(note.id);
       const rendered = noteWithDelta(note, selected, dragDelta);
-      const fill = selected ? NOTE_SELECTED_COLOR : NOTE_COLOR;
-      drawNote(rendered, fill);
+      drawNote(rendered, NOTE_COLOR, { hollow: selected });
     }
 
     // Uncommitted take notes (ghosts)
@@ -102,14 +102,14 @@ export function PianoRoll(): JSX.Element {
           velocity: t.velocity,
         },
         TAKE_GHOST_COLOR,
-        { alpha: 0.6 },
+        { hollow: true, alpha: 0.4 },
       );
     }
 
     // Marquee
     if (drag?.kind === "marquee") {
-      ctx.strokeStyle = "rgba(255,209,102,0.9)";
-      ctx.fillStyle = "rgba(255,209,102,0.12)";
+      ctx.strokeStyle = "rgba(21,20,15,0.7)";
+      ctx.fillStyle = "rgba(21,20,15,0.06)";
       const x = Math.min(drag.startX, drag.curX);
       const y = Math.min(drag.startY, drag.curY);
       const mw = Math.abs(drag.curX - drag.startX);

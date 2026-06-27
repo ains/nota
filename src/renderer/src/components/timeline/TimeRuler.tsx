@@ -21,9 +21,8 @@ export function TimeRuler(): JSX.Element {
     const first = Math.floor(viewport.scrollSec / tick) * tick;
     const last = pxToSec(viewport, w);
     ctx.font = "10px system-ui, sans-serif";
-    ctx.fillStyle = "var(--text-dim)";
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
-    ctx.fillStyle = "#8b8fa3";
+    ctx.strokeStyle = "rgba(21,20,15,0.4)";
+    ctx.fillStyle = "#8a877b";
     ctx.textBaseline = "top";
     for (let t = first; t <= last; t += tick) {
       const x = secToPx(viewport, t);

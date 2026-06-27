@@ -29,8 +29,8 @@ export function WaveformLane(): JSX.Element {
     const mid = h / 2;
     const amp = (h / 2) * 0.92;
 
-    ctx.fillStyle = "#4a9eff";
-    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = "#15140f";
+    ctx.globalAlpha = 0.82;
     const firstBin = Math.max(0, Math.floor(viewport.scrollSec / binSec));
     const lastBin = Math.min(
       bins - 1,
@@ -53,7 +53,7 @@ export function WaveformLane(): JSX.Element {
     ctx.globalAlpha = 1;
 
     // center line
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.strokeStyle = "rgba(21,20,15,0.15)";
     ctx.beginPath();
     ctx.moveTo(0, mid);
     ctx.lineTo(w, mid);

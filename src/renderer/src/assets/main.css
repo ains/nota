@@ -1,13 +1,24 @@
+/*
+ * Nota — visual theme.
+ * Inspired by engraved sheet music: ivory paper, black ink, hairline rules,
+ * straight lines and sharp corners. Strictly monochrome — hierarchy comes from
+ * ink weight (fill vs. outline, solid vs. faded), never from hue.
+ */
+
 :root {
-  --bg: #14151c;
-  --bg-panel: #1b1d27;
-  --bg-lane: #181a23;
-  --border: #2a2d3a;
-  --text: #d8dae6;
-  --text-dim: #8b8fa3;
-  --accent: #5fb0f9;
-  --accent-warm: #ffd166;
-  --rec: #f25f5c;
+  --paper: #f4f2ec; /* desk / margin */
+  --bg: #f4f2ec;
+  --bg-panel: #fbfaf6; /* toolbars, cards, gutters */
+  --bg-lane: #ffffff; /* the staff itself */
+  --border: #d6d3c8; /* hairline rules */
+  --rule-strong: #15140f; /* heavy ink rule */
+  --text: #15140f; /* ink */
+  --text-dim: #8a877b; /* pencil / faded ink */
+  --ink: #15140f;
+  --accent: #15140f; /* black is the only accent */
+  --accent-warm: #15140f;
+  --rec: #b3261e; /* the one permitted accent — record red, like an editor's mark */
+  --serif: "Hoefler Text", "Iowan Old Style", Georgia, "Times New Roman", serif;
   --gutter-w: 56px;
 }
 
@@ -35,6 +46,11 @@ body {
   user-select: none;
 }
 
+input[type="range"],
+input[type="checkbox"] {
+  accent-color: var(--ink);
+}
+
 .app {
   display: flex;
   flex-direction: column;
@@ -42,37 +58,42 @@ body {
 }
 
 button {
-  background: #262936;
+  background: var(--bg-panel);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
   padding: 4px 10px;
   font-size: 12px;
+  /* Fixed line box so glyph buttons (⏵ ⏹) match text buttons in height. */
+  line-height: 16px;
   cursor: pointer;
 }
 
 button:hover:not(:disabled) {
-  background: #303446;
+  background: var(--ink);
+  color: var(--bg-lane);
 }
 
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: default;
 }
 
 button.primary {
-  background: var(--accent);
-  color: #10131a;
+  background: var(--ink);
+  color: var(--bg-lane);
   font-weight: 600;
 }
 
 select {
-  background: #262936;
+  background: var(--bg-panel);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 3px 6px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 4px 6px;
   font-size: 12px;
+  /* Match the fixed line box of buttons so heights line up in the top bar. */
+  line-height: 16px;
   max-width: 160px;
 }
 
@@ -87,13 +108,16 @@ select {
 }
 
 .library.dragging {
-  outline: 2px dashed var(--accent);
+  outline: 1px dashed var(--ink);
   outline-offset: -12px;
 }
 
 .library-title {
   margin: 0 0 4px;
-  font-size: 28px;
+  font-family: var(--serif);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .library-hint {
@@ -120,12 +144,19 @@ select {
   text-align: left;
   padding: 14px;
   background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+}
+
+.project-card:hover:not(:disabled) {
+  background: var(--bg-panel);
+  color: var(--text);
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
 .project-name {
-  font-size: 14px;
+  font-family: var(--serif);
+  font-size: 15px;
   font-weight: 600;
   color: var(--text);
 }
@@ -159,7 +190,7 @@ select {
 }
 
 .project-remove:hover {
-  color: var(--accent-warm);
+  color: var(--ink);
 }
 
 /* ---- transport bar ---- */
@@ -170,7 +201,7 @@ select {
   gap: 16px;
   padding: 8px 12px;
   background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--rule-strong);
   flex-wrap: wrap;
 }
 
@@ -185,7 +216,6 @@ select {
 }
 
 .tb-play {
-  font-size: 16px;
   width: 42px;
 }
 
@@ -193,20 +223,28 @@ select {
   color: var(--rec);
 }
 
+.tb-rec:hover:not(:disabled) {
+  background: var(--rec);
+  color: #fff;
+  border-color: var(--rec);
+}
+
 .tb-rec.active {
   background: var(--rec);
   color: #fff;
+  border-color: var(--rec);
   animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
   50% {
-    opacity: 0.6;
+    opacity: 0.45;
   }
 }
 
 .tb-commit {
-  background: #2c4a33;
+  background: var(--ink);
+  color: var(--bg-lane);
 }
 
 .time-readout {
@@ -214,7 +252,7 @@ select {
   font-size: 15px;
   min-width: 92px;
   padding-left: 8px;
-  color: var(--accent-warm);
+  color: var(--ink);
 }
 
 .tb-check {
@@ -238,8 +276,7 @@ select {
 }
 
 .tb-midi-error {
-  color: var(--accent-warm);
-  border-color: var(--accent-warm);
+  font-style: italic;
 }
 
 /* ---- editor body (timeline + side drawer) ---- */
@@ -272,7 +309,7 @@ select {
   width: var(--gutter-w);
   flex-shrink: 0;
   background: var(--bg-panel);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--rule-strong);
 }
 
 .lane-canvas {
@@ -305,16 +342,16 @@ select {
   position: relative;
   flex: 1;
   min-width: 0;
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--bg-panel);
 }
 
 .loop-region {
   position: absolute;
   top: 2px;
   bottom: 2px;
-  background: rgba(95, 176, 249, 0.18);
-  border: 1px solid rgba(95, 176, 249, 0.5);
-  border-radius: 3px;
+  background: rgba(21, 20, 15, 0.06);
+  border: 1px solid var(--ink);
+  border-radius: 0;
   font-size: 10px;
   display: flex;
   align-items: center;
@@ -324,12 +361,13 @@ select {
 }
 
 .loop-region.active {
-  background: rgba(255, 209, 102, 0.25);
-  border-color: var(--accent-warm);
+  background: var(--ink);
+  color: var(--bg-lane);
+  border-color: var(--ink);
 }
 
 .loop-region.draft {
-  background: rgba(255, 209, 102, 0.15);
+  background: rgba(21, 20, 15, 0.04);
   border-style: dashed;
   pointer-events: none;
 }
@@ -339,6 +377,7 @@ select {
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  font-style: italic;
 }
 
 .loop-delete {
@@ -346,7 +385,14 @@ select {
   background: none;
   padding: 0 4px;
   font-size: 11px;
-  color: var(--text-dim);
+  color: inherit;
+  opacity: 0.6;
+}
+
+.loop-delete:hover {
+  background: none;
+  color: inherit;
+  opacity: 1;
 }
 
 .loop-handle {
@@ -374,7 +420,17 @@ select {
 .roll-toggle {
   padding: 1px 12px;
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--bg-lane);
+  border: none;
+  background: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.roll-toggle:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--bg-lane);
+  opacity: 0.85;
 }
 
 .roll-options-bar {
@@ -401,7 +457,7 @@ select {
 .keys-gutter {
   width: var(--gutter-w);
   flex-shrink: 0;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--rule-strong);
   position: sticky;
   left: 0;
 }
@@ -428,16 +484,15 @@ select {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--accent-warm);
-  box-shadow: 0 0 4px rgba(255, 209, 102, 0.6);
+  background: var(--ink);
   will-change: transform;
 }
 
 /* ---- volume drawer ---- */
 
 .tb-mixer.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--ink);
+  color: var(--bg-lane);
 }
 
 .volume-drawer {
@@ -448,7 +503,7 @@ select {
   gap: 20px;
   padding: 14px 16px;
   background: var(--bg-panel);
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--rule-strong);
   overflow-y: auto;
 }
 
@@ -456,7 +511,8 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-family: var(--serif);
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
 }
@@ -468,6 +524,11 @@ select {
   font-size: 18px;
   line-height: 1;
   color: var(--text-dim);
+}
+
+.vd-close:hover {
+  background: none;
+  color: var(--ink);
 }
 
 .vd-row {
@@ -506,9 +567,9 @@ select {
   bottom: 56px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(20, 21, 28, 0.92);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: var(--bg-lane);
+  border: 1px solid var(--ink);
+  border-radius: 0;
   padding: 6px 12px;
   font-family: ui-monospace, Menlo, monospace;
   font-size: 12px;
@@ -529,7 +590,7 @@ select {
   flex-shrink: 0;
   padding: 6px 12px;
   background: var(--bg-panel);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--rule-strong);
 }
 
 .zoom-control {
@@ -549,7 +610,7 @@ select {
 .dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(21, 20, 15, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -557,9 +618,10 @@ select {
 }
 
 .dialog {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--bg-lane);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  box-shadow: 6px 6px 0 var(--ink);
   padding: 20px 24px;
   width: 440px;
   max-width: 90vw;
@@ -567,7 +629,8 @@ select {
 
 .dialog h2 {
   margin: 0 0 10px;
-  font-size: 16px;
+  font-family: var(--serif);
+  font-size: 18px;
 }
 
 .dialog-actions {
@@ -586,7 +649,8 @@ select {
 }
 
 .dialog-warn {
-  color: var(--accent-warm);
+  font-style: italic;
+  color: var(--ink);
 }
 
 .cal-slider {
