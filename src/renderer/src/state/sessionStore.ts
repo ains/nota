@@ -20,6 +20,16 @@ export interface DragDelta {
   resize?: boolean;
 }
 
+/**
+ * An ephemeral loop region the user is sketching by dragging across the
+ * waveform. It renders in the loop lane in the active style; clicking it
+ * saves it as a real region, clicking elsewhere discards it.
+ */
+export interface PendingRegion {
+  startSec: number;
+  endSec: number;
+}
+
 export interface SessionState {
   view: AppView;
   viewport: Viewport;
@@ -38,6 +48,8 @@ export interface SessionState {
 
   /** Active loop region id (drives the transport loop) */
   activeLoopId: string | null;
+  /** Unsaved loop region sketched on the waveform, awaiting save/discard */
+  pendingRegion: PendingRegion | null;
 
   midiDevices: MidiDeviceInfo[];
   activeMidiDeviceId: string | null;
@@ -65,6 +77,7 @@ export interface SessionState {
   setTakeNotes(notes: CapturedNote[]): void;
   appendTakeNote(note: CapturedNote): void;
   setActiveLoopId(id: string | null): void;
+  setPendingRegion(r: PendingRegion | null): void;
   setMidiDevices(devices: MidiDeviceInfo[], activeId: string | null): void;
   setMidiError(error: string | null): void;
   setAudioMuted(b: boolean): void;
@@ -90,6 +103,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   takeNotes: [],
 
   activeLoopId: null,
+  pendingRegion: null,
 
   midiDevices: [],
   activeMidiDeviceId: null,
@@ -113,6 +127,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   setTakeNotes: (takeNotes) => set({ takeNotes }),
   appendTakeNote: (note) => set((s) => ({ takeNotes: [...s.takeNotes, note] })),
   setActiveLoopId: (activeLoopId) => set({ activeLoopId }),
+  setPendingRegion: (pendingRegion) => set({ pendingRegion }),
   setMidiDevices: (midiDevices, activeMidiDeviceId) =>
     set({ midiDevices, activeMidiDeviceId }),
   setMidiError: (midiError) => set({ midiError }),

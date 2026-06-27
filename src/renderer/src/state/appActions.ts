@@ -337,6 +337,39 @@ export function refreshActiveLoop(): void {
   setActiveLoop(useSessionStore.getState().activeLoopId);
 }
 
+/**
+ * Sketch an unsaved loop region (e.g. dragged across the waveform). It renders
+ * in the loop lane and drives the transport loop for preview, but is not saved
+ * to the project until {@link commitPendingRegion}. Supersedes any active loop.
+ */
+export function setPendingRegion(startSec: number, endSec: number): void {
+  const session = useSessionStore.getState();
+  session.setActiveLoopId(null);
+  session.setPendingRegion({ startSec, endSec });
+  engine.transport.setLoop({ start: startSec, end: endSec });
+  engine.transport.seek(startSec);
+}
+
+/** Save the pending region as a real project section and activate it. */
+export function commitPendingRegion(): void {
+  const session = useSessionStore.getState();
+  const pending = session.pendingRegion;
+  if (!pending) return;
+  session.setPendingRegion(null);
+  const region = useProjectStore
+    .getState()
+    .addLoopRegion(pending.startSec, pending.endSec);
+  setActiveLoop(region.id);
+}
+
+/** Drop the pending region and clear its preview loop. */
+export function discardPendingRegion(): void {
+  const session = useSessionStore.getState();
+  if (!session.pendingRegion) return;
+  session.setPendingRegion(null);
+  engine.transport.setLoop(null);
+}
+
 // --- recording ---
 
 export function startRecording(): void {

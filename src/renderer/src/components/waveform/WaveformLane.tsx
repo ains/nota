@@ -8,18 +8,73 @@ import {
   binsForLevel,
   VALUES_PER_BIN,
 } from "../../core/audio/peaks";
-import { pxToSec } from "../../core/timeline/viewport";
+import { pxToSec, secToPx } from "../../core/timeline/viewport";
 import { useCanvas } from "../useCanvas";
 import { useTimelineWheel } from "./../timeline/useTimelineWheel";
-import { seek } from "../../state/appActions";
+import { seek, setPendingRegion } from "../../state/appActions";
+
+/** Below this drag distance the gesture is treated as a click (seek). */
+const DRAG_THRESHOLD_PX = 3;
+/** Shorter sketches are dropped rather than turned into a loop region. */
+const MIN_REGION_SEC = 0.25;
 
 export function WaveformLane(): JSX.Element {
   const viewport = useSessionStore((s) => s.viewport);
   const peaks = useSessionStore((s) => s.peaks);
+  const pendingRegion = useSessionStore((s) => s.pendingRegion);
   const loading = useSessionStore((s) => s.audioLoading);
   const hasAudio = useProjectStore((s) => s.audio !== null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{
+    startSec: number;
+    startX: number;
+    moved: boolean;
+  } | null>(null);
   useTimelineWheel(containerRef);
+
+  const secAt = (e: React.PointerEvent<HTMLDivElement>): number => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return Math.max(0, pxToSec(viewport, e.clientX - rect.left));
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
+    dragRef.current = { startSec: secAt(e), startX: e.clientX, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (!d.moved && Math.abs(e.clientX - d.startX) < DRAG_THRESHOLD_PX) return;
+    d.moved = true;
+    const sec = secAt(e);
+    // Live-render the sketch in the loop lane; transport stays put until release.
+    useSessionStore.getState().setPendingRegion({
+      startSec: Math.min(d.startSec, sec),
+      endSec: Math.max(d.startSec, sec),
+    });
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d) return;
+    if (!d.moved) {
+      seek(d.startSec);
+      return;
+    }
+    const sec = secAt(e);
+    const start = Math.min(d.startSec, sec);
+    const end = Math.max(d.startSec, sec);
+    if (end - start < MIN_REGION_SEC) {
+      // Too short to be a useful loop — drop the sketch and just seek.
+      useSessionStore.getState().setPendingRegion(null);
+      seek(d.startSec);
+      return;
+    }
+    // Apply the loop to the transport so the sketch previews immediately.
+    setPendingRegion(start, end);
+  };
 
   const canvasRef = useCanvas((ctx, w, h) => {
     if (!peaks) return;
@@ -77,12 +132,22 @@ export function WaveformLane(): JSX.Element {
     <div
       ref={containerRef}
       className="waveform-lane"
-      onPointerDown={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        seek(Math.max(0, pxToSec(viewport, e.clientX - rect.left)));
-      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
     >
       <canvas ref={canvasRef} className="lane-canvas" />
+      {pendingRegion && (
+        <div
+          className="waveform-selection"
+          style={{
+            left: secToPx(viewport, pendingRegion.startSec),
+            width:
+              (pendingRegion.endSec - pendingRegion.startSec) *
+              viewport.pxPerSecond,
+          }}
+        />
+      )}
       {!hasAudio && !loading && (
         <div className="lane-placeholder">Open an audio file to begin (⌘O)</div>
       )}
