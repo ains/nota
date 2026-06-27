@@ -36,11 +36,7 @@ jobs:
 
       - name: Upload screenshots artifact
         id: upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-screenshots
-          path: screenshots/
-          if-no-files-found: error
+        run: node scripts/upload-artifact.mjs
 
       - name: Post screenshots comment
         # Forks get a read-only GITHUB_TOKEN, so skip the comment there.
