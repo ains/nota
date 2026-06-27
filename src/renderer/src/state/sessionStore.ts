@@ -44,10 +44,14 @@ export interface SessionState {
   midiError: string | null;
   audioMuted: boolean;
   synthMuted: boolean;
-  /** Master output volume, 0..1 */
-  masterVolume: number;
+  /** Music (audio file) playback volume, 0..1 */
+  musicVolume: number;
+  /** Synth (sampler) playback volume, 0..1 */
+  synthVolume: number;
   /** Whether the piano roll lane is shown below the waveform */
   showPianoRoll: boolean;
+  /** Whether the right-side volume drawer is shown */
+  showVolumeDrawer: boolean;
 
   setView(v: AppView): void;
   setViewport(vp: Viewport): void;
@@ -65,8 +69,10 @@ export interface SessionState {
   setMidiError(error: string | null): void;
   setAudioMuted(b: boolean): void;
   setSynthMuted(b: boolean): void;
-  setMasterVolume(v: number): void;
+  setMusicVolume(v: number): void;
+  setSynthVolume(v: number): void;
   setShowPianoRoll(b: boolean): void;
+  setShowVolumeDrawer(b: boolean): void;
 }
 
 export const useSessionStore = create<SessionState>()((set) => ({
@@ -90,8 +96,10 @@ export const useSessionStore = create<SessionState>()((set) => ({
   midiError: null,
   audioMuted: false,
   synthMuted: false,
-  masterVolume: 1,
+  musicVolume: 1,
+  synthVolume: 1,
   showPianoRoll: false,
+  showVolumeDrawer: false,
 
   setView: (view) => set({ view }),
   setViewport: (viewport) => set({ viewport }),
@@ -110,8 +118,10 @@ export const useSessionStore = create<SessionState>()((set) => ({
   setMidiError: (midiError) => set({ midiError }),
   setAudioMuted: (audioMuted) => set({ audioMuted }),
   setSynthMuted: (synthMuted) => set({ synthMuted }),
-  setMasterVolume: (masterVolume) => set({ masterVolume }),
+  setMusicVolume: (musicVolume) => set({ musicVolume }),
+  setSynthVolume: (synthVolume) => set({ synthVolume }),
   setShowPianoRoll: (showPianoRoll) => set({ showPianoRoll }),
+  setShowVolumeDrawer: (showVolumeDrawer) => set({ showVolumeDrawer }),
 }));
 
 /** Apply an in-progress drag delta to a note for rendering. */

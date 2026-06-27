@@ -39,7 +39,7 @@ export class Engine {
     this.transport = new Transport();
     this.clockSync = new ClockSync(this.transport.ctx);
     this.midi = new MidiService();
-    this.sampler = new Sampler(this.transport.ctx, this.transport.masterGain);
+    this.sampler = new Sampler(this.transport.ctx, this.transport.synthGain);
     this.scheduler = new Scheduler(this.transport, this.sampler);
     this.mapper = new NoteEventMapper(this.clockSync, this.transport);
     // Monitor registers its handler first, so live audio runs ahead of any
