@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { JSX } from "react";
 import type { Note } from "@shared/types/project";
 import { TransportBar } from "./components/transport/TransportBar";
+import { BottomBar } from "./components/transport/BottomBar";
 import { TimeRuler } from "./components/timeline/TimeRuler";
 import { LoopLane } from "./components/timeline/LoopLane";
 import { Playhead } from "./components/timeline/Playhead";
@@ -244,6 +245,7 @@ function App(): JSX.Element {
         </div>
         {showVolumeDrawer && <VolumeDrawer />}
       </div>
+      <BottomBar />
       <NudgeHud />
     </div>
   );

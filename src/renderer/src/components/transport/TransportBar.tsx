@@ -2,11 +2,7 @@ import { useEffect, useRef } from "react";
 import type { JSX } from "react";
 import { useSessionStore } from "../../state/sessionStore";
 import { useProjectStore } from "../../state/projectStore";
-import {
-  formatTime,
-  zoomToSlider,
-  sliderToZoom,
-} from "../../core/timeline/viewport";
+import { formatTime } from "../../core/timeline/viewport";
 import {
   backToLibrary,
   saveProject,
@@ -14,7 +10,6 @@ import {
   stopTransport,
   commitTake,
   discardTake,
-  setZoom,
   selectMidiDevice,
   retryMidi,
   getEngineRef,
@@ -44,7 +39,6 @@ export function TransportBar(): JSX.Element {
   const activeMidiId = useSessionStore((s) => s.activeMidiDeviceId);
   const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
   const setShowVolumeDrawer = useSessionStore((s) => s.setShowVolumeDrawer);
-  const pxPerSecond = useSessionStore((s) => s.viewport.pxPerSecond);
   const midiError = useSessionStore((s) => s.midiError);
   const hasAudio = useProjectStore((s) => s.audio !== null);
   const dirty = useProjectStore((s) => s.dirty);
@@ -101,20 +95,6 @@ export function TransportBar(): JSX.Element {
           </>
         )}
         <TimeReadout />
-      </div>
-
-      <div className="tb-group tb-right">
-        <label className="tb-slider" title="Zoom">
-          Zoom
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.001}
-            value={zoomToSlider(pxPerSecond)}
-            onChange={(e) => setZoom(sliderToZoom(Number(e.target.value)))}
-          />
-        </label>
       </div>
 
       <div className="tb-group tb-right">
