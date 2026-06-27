@@ -71,8 +71,6 @@ jobs:
               "## 📸 UI screenshots",
               `Rendered from \`${process.env.HEAD_SHA}\` — Library, Project, and Project + Piano Roll.`,
               "",
-              "Private repo, so images can't render inline. Download them from the workflow run:",
-              "",
               `**[⬇️ ui-screenshots artifact](${process.env.ARTIFACT_URL})**`,
             ].join("\n");
 
