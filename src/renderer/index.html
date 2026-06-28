@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <title>Nota</title>
     <!-- connect-src https: allows the piano soundfont fetch (cached offline after first run) -->
+    <!-- wasm-unsafe-eval: lets the Rubber Band time-stretch worklet compile its WebAssembly -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:; worker-src 'self' blob:"
     />
   </head>
 
