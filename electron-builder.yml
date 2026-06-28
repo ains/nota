@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: nota
+appId: com.ains.nota
+productName: Nota
 directories:
   buildResources: build
 files:
@@ -32,10 +32,9 @@ mac:
     - dmg
     - zip
   extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    - NSMicrophoneUsageDescription: Nota needs the microphone to record your performance against the track.
+    - NSDocumentsFolderUsageDescription: Nota needs access to open and save your projects.
+    - NSDownloadsFolderUsageDescription: Nota needs access to open and save your projects.
   # Notarization runs only when Apple credentials are present in the env
   # (i.e. in CI via the Release workflow); local builds skip it automatically.
   notarize: true
@@ -48,7 +47,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: Ainsley Escorce-Jones <me@ains.co>
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
