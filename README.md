@@ -63,6 +63,32 @@ npm run lint
 npm run build:mac  # or build:win / build:linux
 ```
 
+### Releasing (signed + notarized macOS builds)
+
+Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml),
+which builds, **code-signs, and notarizes** arm64 + x64 macOS builds and uploads the
+DMGs/zips to a **draft** GitHub Release for you to review and publish:
+
+```bash
+npm version 1.2.3      # bump package.json + create the v1.2.3 tag
+git push --follow-tags
+```
+
+It needs six repository secrets (Settings → Secrets and variables → Actions); the
+workflow header documents exactly how to generate each:
+
+| Secret                 | What it is                                                   |
+| ---------------------- | ------------------------------------------------------------ |
+| `CSC_LINK`             | Base64 of your _Developer ID Application_ certificate (.p12) |
+| `CSC_KEY_PASSWORD`     | Password for that .p12                                       |
+| `APPLE_API_KEY_BASE64` | Base64 of your App Store Connect API key (.p8)               |
+| `APPLE_API_KEY_ID`     | The API key's 10-char Key ID                                 |
+| `APPLE_API_ISSUER`     | The API key Issuer ID (UUID)                                 |
+| `APPLE_TEAM_ID`        | Your Apple Developer Team ID                                 |
+
+Local `npm run build:mac` still produces a host-architecture build and skips
+notarization — it only runs in CI, where the Apple credentials live.
+
 ### Testing without MIDI hardware
 
 In dev mode `window.__nota_dev` exposes the engine, stores and actions, e.g.
@@ -92,5 +118,5 @@ src/renderer/src/
 ## Remaining roadmap
 
 - MIDI file import/export (`@tonejs/midi`)
-- App icon, recent-files menu, packaged-build signing/notarization
+- Recent-files menu
 - Re-test the Web MIDI permission flow in packaged builds on all three platforms
