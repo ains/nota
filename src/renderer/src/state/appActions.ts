@@ -15,6 +15,7 @@ import {
   addRecentProject,
   removeRecentProject,
 } from "../persistence/recentProjects";
+import { saveAudioSettings } from "../persistence/audioSettings";
 import { useProjectStore, clearHistory } from "./projectStore";
 import { useSessionStore } from "./sessionStore";
 
@@ -33,11 +34,33 @@ export function initEngineBindings(): void {
     useSessionStore.getState().setIsPlaying(engine.transport.isPlaying);
   });
 
+  // Apply the persisted audio-control mix (seeded into the session store from
+  // localStorage) to the engine on boot.
   const session = useSessionStore.getState();
   engine.scheduler.setMuted(session.synthMuted);
+  engine.transport.setAudioMuted(session.audioMuted);
   engine.transport.setMusicVolume(session.musicVolume);
   engine.transport.setSynthVolume(session.synthVolume);
   engine.transport.setRate(session.playbackRate);
+
+  // Persist the audio-control mix whenever it changes so it carries across
+  // restarts. Writes on each change (including rapid slider drags), but the
+  // payload is a tiny JSON blob and localStorage.setItem is synchronous.
+  useSessionStore.subscribe((s, prev) => {
+    if (
+      s.musicVolume !== prev.musicVolume ||
+      s.synthVolume !== prev.synthVolume ||
+      s.audioMuted !== prev.audioMuted ||
+      s.synthMuted !== prev.synthMuted
+    ) {
+      saveAudioSettings({
+        musicVolume: s.musicVolume,
+        synthVolume: s.synthVolume,
+        audioMuted: s.audioMuted,
+        synthMuted: s.synthMuted,
+      });
+    }
+  });
 
   // Keep the playback scheduler's note list in sync with the document.
   engine.scheduler.setNotes(useProjectStore.getState().notes);
