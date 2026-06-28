@@ -37,6 +37,7 @@ export function initEngineBindings(): void {
   engine.scheduler.setMuted(session.synthMuted);
   engine.transport.setMusicVolume(session.musicVolume);
   engine.transport.setSynthVolume(session.synthVolume);
+  engine.transport.setRate(session.playbackRate);
 
   // Keep the playback scheduler's note list in sync with the document.
   engine.scheduler.setNotes(useProjectStore.getState().notes);
@@ -307,6 +308,12 @@ export function setMusicVolume(volume: number): void {
 export function setSynthVolume(volume: number): void {
   engine.transport.setSynthVolume(volume);
   useSessionStore.getState().setSynthVolume(volume);
+}
+
+/** Change playback speed (pitch preserved). */
+export function setPlaybackRate(rate: number): void {
+  engine.transport.setRate(rate);
+  useSessionStore.getState().setPlaybackRate(rate);
 }
 
 /** Zoom to an absolute pxPerSecond, keeping the centre of the view fixed. */

@@ -5,6 +5,7 @@
  */
 import { create } from "zustand";
 import type { Note } from "@shared/types/project";
+import { DEFAULT_PLAYBACK_RATE } from "../constants";
 import type { Viewport } from "../core/timeline/viewport";
 import type { PeakPyramid } from "../core/audio/peaks";
 import type { CapturedNote } from "../core/engine/Recorder";
@@ -60,6 +61,8 @@ export interface SessionState {
   musicVolume: number;
   /** Synth (sampler) playback volume, 0..1 */
   synthVolume: number;
+  /** Playback speed multiplier (pitch preserved) */
+  playbackRate: number;
   /** Whether the piano roll lane is shown below the waveform */
   showPianoRoll: boolean;
   /** Whether the right-side volume drawer is shown */
@@ -84,6 +87,7 @@ export interface SessionState {
   setSynthMuted(b: boolean): void;
   setMusicVolume(v: number): void;
   setSynthVolume(v: number): void;
+  setPlaybackRate(v: number): void;
   setShowPianoRoll(b: boolean): void;
   setShowVolumeDrawer(b: boolean): void;
 }
@@ -112,6 +116,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   synthMuted: false,
   musicVolume: 1,
   synthVolume: 1,
+  playbackRate: DEFAULT_PLAYBACK_RATE,
   showPianoRoll: false,
   showVolumeDrawer: false,
 
@@ -135,6 +140,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   setSynthMuted: (synthMuted) => set({ synthMuted }),
   setMusicVolume: (musicVolume) => set({ musicVolume }),
   setSynthVolume: (synthVolume) => set({ synthVolume }),
+  setPlaybackRate: (playbackRate) => set({ playbackRate }),
   setShowPianoRoll: (showPianoRoll) => set({ showPianoRoll }),
   setShowVolumeDrawer: (showVolumeDrawer) => set({ showVolumeDrawer }),
 }));

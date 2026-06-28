@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useSessionStore } from "../../state/sessionStore";
 import { useProjectStore } from "../../state/projectStore";
 import { formatTime } from "../../core/timeline/viewport";
+import { PLAYBACK_SPEEDS } from "../../constants";
 import {
   backToLibrary,
   saveProject,
@@ -12,6 +13,7 @@ import {
   discardTake,
   selectMidiDevice,
   retryMidi,
+  setPlaybackRate,
   getEngineRef,
 } from "../../state/appActions";
 
@@ -39,6 +41,7 @@ export function TransportBar(): JSX.Element {
   const activeMidiId = useSessionStore((s) => s.activeMidiDeviceId);
   const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
   const setShowVolumeDrawer = useSessionStore((s) => s.setShowVolumeDrawer);
+  const playbackRate = useSessionStore((s) => s.playbackRate);
   const midiError = useSessionStore((s) => s.midiError);
   const hasAudio = useProjectStore((s) => s.audio !== null);
   const dirty = useProjectStore((s) => s.dirty);
@@ -94,6 +97,19 @@ export function TransportBar(): JSX.Element {
             </button>
           </>
         )}
+        <select
+          className="tb-speed"
+          value={playbackRate}
+          onChange={(e) => setPlaybackRate(Number(e.target.value))}
+          disabled={!hasAudio}
+          title="Playback speed (pitch preserved)"
+        >
+          {PLAYBACK_SPEEDS.map((s) => (
+            <option key={s} value={s}>
+              {s}×
+            </option>
+          ))}
+        </select>
         <TimeReadout />
       </div>
 

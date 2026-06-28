@@ -76,27 +76,28 @@ export class Scheduler {
       return;
 
     const ctx = this.transport.ctx;
-    const { startCtx, songOffset } = this.transport.anchor;
+    const { startCtx, songOffset, rate } = this.transport.anchor;
     const loop = this.transport.loopSpan;
     const now = ctx.currentTime;
     const horizon = now + SCHEDULE_AHEAD_SEC;
 
+    // Timeline seconds are stretched by 1/rate in ctx time, so a note at
+    // original position n sounds at ctxOn = startCtx + (n − songOffset)/rate.
     if (!loop) {
       for (const note of this.notes) {
-        const ctxOn = startCtx + (note.onsetSec - songOffset);
+        const ctxOn = startCtx + (note.onsetSec - songOffset) / rate;
         if (ctxOn >= horizon) break;
         if (ctxOn < now - 0.02) continue;
-        this.issue(note, 0, ctxOn);
+        this.issue(note, 0, ctxOn, rate);
       }
       return;
     }
 
     const { start: Ls, end: Le } = loop;
     const len = Le - Ls;
-    // Pass k occupies elapsed range [k·len + (Ls − songOffset), …): find the
-    // passes whose ctx-time window intersects [now, horizon).
-    const elapsedNow = now - startCtx;
-    const elapsedHorizon = horizon - startCtx;
+    // Elapsed timeline seconds (original) since the anchor.
+    const elapsedNow = (now - startCtx) * rate;
+    const elapsedHorizon = (horizon - startCtx) * rate;
     const kMin = Math.max(0, Math.floor((elapsedNow + songOffset - Le) / len));
     const kMax = Math.ceil((elapsedHorizon + songOffset - Ls) / len);
 
@@ -105,23 +106,24 @@ export class Scheduler {
         if (note.onsetSec < Ls || note.onsetSec >= Le) continue;
         // First pass (k=0) plays from songOffset, which may start mid-loop.
         if (k === 0 && note.onsetSec < songOffset) continue;
-        const ctxOn = startCtx + (note.onsetSec - songOffset) + k * len;
+        const ctxOn = startCtx + (note.onsetSec - songOffset + k * len) / rate;
         if (ctxOn < now - 0.02 || ctxOn >= horizon) continue;
-        this.issue(note, k, ctxOn);
+        this.issue(note, k, ctxOn, rate);
       }
     }
   }
 
-  private issue(note: Note, pass: number, ctxOn: number): void {
+  private issue(note: Note, pass: number, ctxOn: number, rate: number): void {
     const key = `${note.id}:${pass}`;
     if (this.issued.has(key)) return;
     this.issued.add(key);
+    // Durations stretch with the timeline; pitch is unaffected.
     this.sampler.scheduleNote(
       key,
       note.midi,
       note.velocity,
       ctxOn,
-      note.durationSec,
+      note.durationSec / rate,
     );
   }
 }
