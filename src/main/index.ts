@@ -70,6 +70,12 @@ function createWindow(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId("com.nota");
 
+  // Packaged macOS builds get the icon from the bundled .icns, but in dev the
+  // dock falls back to the default Electron icon unless we set it explicitly.
+  if (process.platform === "darwin" && is.dev) {
+    app.dock?.setIcon(icon);
+  }
+
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window);
   });
