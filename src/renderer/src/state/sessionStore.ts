@@ -1,11 +1,13 @@
 /**
  * Ephemeral UI/session state: viewport, selection, transport mirror,
- * in-progress drag deltas, take-in-progress notes. Never persisted, never
- * undoable.
+ * in-progress drag deltas, take-in-progress notes. Not undoable, and mostly not
+ * persisted — the exception is the audio-control mix (volumes/mutes), which is
+ * seeded from and saved back to localStorage (see persistence/audioSettings).
  */
 import { create } from "zustand";
 import type { Note } from "@shared/types/project";
 import { DEFAULT_PLAYBACK_RATE } from "../constants";
+import { loadAudioSettings } from "../persistence/audioSettings";
 import type { Viewport } from "../core/timeline/viewport";
 import type { PeakPyramid } from "../core/audio/peaks";
 import type { CapturedNote } from "../core/engine/Recorder";
@@ -92,6 +94,8 @@ export interface SessionState {
   setShowVolumeDrawer(b: boolean): void;
 }
 
+const audioSettings = loadAudioSettings();
+
 export const useSessionStore = create<SessionState>()((set) => ({
   view: "library",
   viewport: { pxPerSecond: 100, scrollSec: 0 },
@@ -112,10 +116,10 @@ export const useSessionStore = create<SessionState>()((set) => ({
   midiDevices: [],
   activeMidiDeviceId: null,
   midiError: null,
-  audioMuted: false,
-  synthMuted: false,
-  musicVolume: 1,
-  synthVolume: 1,
+  audioMuted: audioSettings.audioMuted,
+  synthMuted: audioSettings.synthMuted,
+  musicVolume: audioSettings.musicVolume,
+  synthVolume: audioSettings.synthVolume,
   playbackRate: DEFAULT_PLAYBACK_RATE,
   showPianoRoll: false,
   showVolumeDrawer: false,
