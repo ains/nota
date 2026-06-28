@@ -9,6 +9,8 @@ files:
   - "!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
   - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+  # Build-time only: read from source at sign time, never needed inside the app.
+  - "!resources/entitlements.mac.plist"
 asarUnpack:
   - resources/**
 win:
@@ -21,15 +23,25 @@ nsis:
   createDesktopShortcut: always
 mac:
   icon: resources/icon.icns
-  entitlementsInherit: build/entitlements.mac.plist
+  # Hardened Runtime + entitlements are prerequisites for notarization.
+  hardenedRuntime: true
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  # dmg for humans; zip drives auto-update + generates latest-mac.yml.
+  target:
+    - dmg
+    - zip
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+  # Notarization runs only when Apple credentials are present in the env
+  # (i.e. in CI via the Release workflow); local builds skip it automatically.
+  notarize: true
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  # ${arch} keeps the arm64 and x64 DMGs from colliding.
+  artifactName: ${name}-${version}-${arch}.${ext}
 linux:
   icon: resources/icon.png
   target:
@@ -42,5 +54,6 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: ains
+  repo: nota
