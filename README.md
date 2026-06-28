@@ -78,12 +78,12 @@ It needs six repository secrets (Settings → Secrets and variables → Actions)
 workflow header documents exactly how to generate each:
 
 | Secret                 | What it is                                                   |
-| ---------------------- | ----------------------------------------------------------- |
+| ---------------------- | ------------------------------------------------------------ |
 | `CSC_LINK`             | Base64 of your _Developer ID Application_ certificate (.p12) |
 | `CSC_KEY_PASSWORD`     | Password for that .p12                                       |
-| `APPLE_API_KEY_BASE64` | Base64 of your App Store Connect API key (.p8)              |
-| `APPLE_API_KEY_ID`     | The API key's 10-char Key ID                                |
-| `APPLE_API_ISSUER`     | The API key Issuer ID (UUID)                                |
+| `APPLE_API_KEY_BASE64` | Base64 of your App Store Connect API key (.p8)               |
+| `APPLE_API_KEY_ID`     | The API key's 10-char Key ID                                 |
+| `APPLE_API_ISSUER`     | The API key Issuer ID (UUID)                                 |
 | `APPLE_TEAM_ID`        | Your Apple Developer Team ID                                 |
 
 Local `npm run build:mac` still produces a host-architecture build and skips
