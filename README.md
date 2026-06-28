@@ -2,6 +2,8 @@
 
 A pretty, simple cross-platform application for musicians to transcribe music.
 
+<img width="1912" height="1127" alt="Screenshot 2026-06-28 at 3 14 25 PM" src="https://github.com/user-attachments/assets/faf784bf-62b6-40f0-bd3c-fdb1d22dd3c8" />
+
 ## Keyboard shortcuts
 
 | Key                | Action                                 |
