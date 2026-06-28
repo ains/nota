@@ -68,7 +68,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId("com.nota");
+  electronApp.setAppUserModelId("com.ains.nota");
 
   // Packaged macOS builds get the icon from the bundled .icns, but in dev the
   // dock falls back to the default Electron icon unless we set it explicitly.
