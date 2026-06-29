@@ -59,6 +59,7 @@ jobs:
 
       - name: Build, sign, notarize & publish
         env:
+          DEBUG: "electron-builder,electron-osx-sign*"
           # Code-signing identity (Developer ID Application).
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
