@@ -130,6 +130,13 @@
       .cta {
         margin-top: 2.75rem;
       }
+      /* Side-by-side download buttons; wrap to a stack on narrow screens. */
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.85rem;
+      }
       .meta {
         margin-top: 0.9rem;
         font-size: 0.85rem;
@@ -164,10 +171,15 @@
         </p>
 
         <div class="cta">
-          <a class="btn btn-primary" href="%DOWNLOAD_URL%"
-            >Download for macOS</a
-          >
-          <p class="meta">For macOS · Apple silicon</p>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="%DOWNLOAD_URL_MAC%"
+              >Download for macOS</a
+            >
+            <a class="btn btn-primary" href="%DOWNLOAD_URL_WIN%"
+              >Download for Windows</a
+            >
+          </div>
+          <p class="meta">macOS (Apple silicon) · Windows (64-bit)</p>
         </div>
       </header>
 

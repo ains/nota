@@ -1,24 +1,38 @@
 name: Release
 
-# Build, sign, and notarize the macOS app, then upload it to a draft GitHub
-# Release. Triggered by pushing a version tag, e.g.:
+# Build the desktop apps and upload them to a single draft GitHub Release:
+#   - macOS:   signed + notarized .dmg/.zip (needs the Apple secrets below)
+#   - Windows: NSIS installer .exe (signing optional — see below)
+#
+# The Windows job runs *after* the macOS job (needs: release). electron-builder
+# creates the draft release on the macOS run, so the Windows run just finds and
+# reuses that same draft — one release per tag, with no race to create two
+# drafts. electron-builder publishes to a *draft* by default, so artifacts are
+# uploaded but nothing is public until you review and click "Publish" on the
+# release page. Re-run the Windows job from the Actions tab if macOS flaked.
+#
+# Triggered by pushing a version tag, e.g.:
 #
 #   npm version 1.2.3   # bumps package.json + creates the tag
 #   git push --follow-tags
 #
-# electron-builder publishes to a *draft* release by default, so artifacts are
-# uploaded but nothing is public until you review and click "Publish" on the
-# release page.
-#
 # Required repository secrets (Settings → Secrets and variables → Actions):
-#   CSC_LINK              Base64 of your "Developer ID Application" cert (.p12).
-#                          Export from Keychain, then: base64 -i cert.p12 | pbcopy
-#   CSC_KEY_PASSWORD      Password you set when exporting that .p12.
-#   APPLE_API_KEY_BASE64  Base64 of your App Store Connect API key (.p8):
-#                          base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy
-#   APPLE_API_KEY_ID      The key's 10-char Key ID (e.g. ABCDE12345).
-#   APPLE_API_ISSUER      The Issuer ID (UUID) shown above the keys list.
-#   APPLE_TEAM_ID         Your 10-char Apple Developer Team ID.
+#
+#   macOS signing + notarization (the macOS job needs all of these):
+#     CSC_LINK              Base64 of your "Developer ID Application" cert (.p12).
+#                            Export from Keychain, then: base64 -i cert.p12 | pbcopy
+#     CSC_KEY_PASSWORD      Password you set when exporting that .p12.
+#     APPLE_API_KEY_BASE64  Base64 of your App Store Connect API key (.p8):
+#                            base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy
+#     APPLE_API_KEY_ID      The key's 10-char Key ID (e.g. ABCDE12345).
+#     APPLE_API_ISSUER      The Issuer ID (UUID) shown above the keys list.
+#     APPLE_TEAM_ID         Your 10-char Apple Developer Team ID.
+#
+#   Windows signing (OPTIONAL — omit to ship an unsigned installer, which works
+#   but shows a SmartScreen warning until the certificate builds reputation):
+#     WINDOWS_CSC_LINK          Base64 of your Authenticode cert (.pfx/.p12):
+#                                base64 -i cert.pfx | pbcopy
+#     WINDOWS_CSC_KEY_PASSWORD  Password for that cert.
 #
 # GITHUB_TOKEN is provided automatically; `permissions: contents: write` lets
 # it create the release.
@@ -75,3 +89,40 @@ jobs:
         run: |
           npm run build
           npx electron-builder --mac --arm64 --publish always
+
+  release-windows:
+    name: Build & publish (Windows)
+    # Wait for the macOS job so the draft release already exists: electron-builder
+    # creates it there, and this run finds and reuses the same draft instead of
+    # racing to create a second one for the tag.
+    needs: release
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build & publish
+        # Use bash (Git Bash ships on the runner) so `set -e` stops the step if
+        # the build fails, instead of falling through to the package step.
+        shell: bash
+        env:
+          DEBUG: "electron-builder"
+          # Optional Authenticode signing. When these secrets are unset, CSC_LINK
+          # is empty and electron-builder builds an unsigned installer.
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          # Lets electron-builder upload assets to the draft release.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Mirror the macOS job: typecheck + electron-vite build into out/, then
+        # package the NSIS x64 installer and publish it to the same draft release.
+        run: |
+          npm run build
+          npx electron-builder --win --x64 --publish always
