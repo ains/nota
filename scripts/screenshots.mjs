@@ -1,7 +1,10 @@
 /**
- * Render the Nota renderer in a real (headless) browser and capture the three
- * key UI states: the Library screen, the Project (editor) screen, and the
- * Project screen with the piano roll open.
+ * Render the Nota renderer in a real (headless) browser and capture the four
+ * key UI states: the Library screen, the Project (editor) screen, the Project
+ * screen with the piano roll open, and the Project screen with the audio-
+ * controls drawer open. The last one zooms a "section" bar past the timeline
+ * edge so it guards that loop regions stay clipped to the lane instead of
+ * painting over the drawer.
  *
  * The app is served by `npm run dev:web` (a plain Vite dev server), so the
  * `window.__nota_dev` injection hook is available. We use it to load a
@@ -176,13 +179,33 @@ async function main() {
   await page.waitForTimeout(400); // let the piano roll canvas paint
   await page.screenshot({ path: resolve(OUT_DIR, "project-piano-roll.png") });
 
+  // --- 4. Project + audio-controls drawer ---
+  // Open the audio-controls (volume) drawer and add a "section" that, at this
+  // zoom, runs off the right edge of the timeline. The loop lane clips its
+  // regions, so the section bar must stop at the drawer rather than paint over
+  // it — this shot guards that behaviour against regressions.
+  await page.evaluate(() => {
+    const dev = window.__nota_dev;
+    dev.useSessionStore.getState().setShowPianoRoll(false);
+    dev.useSessionStore.getState().setShowVolumeDrawer(true);
+    dev.useProjectStore.getState().addLoopRegion(0.5, 7.5);
+    dev.useSessionStore
+      .getState()
+      .setViewport({ pxPerSecond: 200, scrollSec: 0 });
+  });
+  await page.waitForSelector(".volume-drawer");
+  await page.waitForTimeout(400); // let the waveform redraw at the new zoom
+  await page.screenshot({
+    path: resolve(OUT_DIR, "project-volume-drawer.png"),
+  });
+
   await browser.close();
 
   if (errors.length > 0) {
     console.error("Page reported errors:\n" + errors.join("\n"));
     process.exit(1);
   }
-  console.log("Captured 3 screenshots to", OUT_DIR);
+  console.log("Captured 4 screenshots to", OUT_DIR);
 }
 
 main().catch((err) => {
