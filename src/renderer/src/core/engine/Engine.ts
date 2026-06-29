@@ -125,11 +125,10 @@ export class Engine {
     this.emit();
   }
 
-  stopRecording(keep: boolean): CapturedNote[] {
-    if (!this.recording.isActive) return [];
-    const take = this.recording.stop(keep);
+  stopRecording(): void {
+    if (!this.recording.isActive) return;
+    this.recording.stop();
     this.emit();
-    return take;
   }
 
   get isRecording(): boolean {

@@ -253,11 +253,6 @@ select {
   }
 }
 
-.tb-commit {
-  background: var(--ink);
-  color: var(--bg-lane);
-}
-
 .time-readout {
   font-family: ui-monospace, Menlo, monospace;
   font-size: 15px;

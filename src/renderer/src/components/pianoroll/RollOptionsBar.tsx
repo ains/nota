@@ -33,7 +33,7 @@ export function RollOptionsBar(): JSX.Element {
       {isRecording ? (
         <button
           className="tb-rec active"
-          onClick={() => stopRecording(true)}
+          onClick={stopRecording}
           title="Stop recording"
         >
           ● REC

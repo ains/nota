@@ -1,8 +1,9 @@
 /**
  * Ephemeral UI/session state: viewport, selection, transport mirror,
- * in-progress drag deltas, take-in-progress notes. Not undoable, and mostly not
- * persisted — the exception is the audio-control mix (volumes/mutes), which is
- * seeded from and saved back to localStorage (see persistence/audioSettings).
+ * in-progress drag deltas, and the live recording buffer. Not undoable, and
+ * mostly not persisted — the exception is the audio-control mix (volumes/mutes),
+ * which is seeded from and saved back to localStorage (see
+ * persistence/audioSettings).
  */
 import { create } from "zustand";
 import type { Note } from "@shared/types/project";
@@ -46,8 +47,12 @@ export interface SessionState {
 
   selection: Set<string>;
   dragDelta: DragDelta | null;
-  /** Uncommitted take notes (ghost rendering during/after recording) */
-  takeNotes: CapturedNote[];
+  /**
+   * Notes captured during an in-progress recording. Rendered alongside the
+   * document's notes for live feedback, then folded into the project (one undo
+   * step) when recording stops. Ephemeral: never undoable or saved.
+   */
+  uncommittedNotes: CapturedNote[];
 
   /** Active loop region id (drives the transport loop) */
   activeLoopId: string | null;
@@ -79,8 +84,8 @@ export interface SessionState {
   setIsRecording(b: boolean): void;
   setSelection(ids: Set<string>): void;
   setDragDelta(d: DragDelta | null): void;
-  setTakeNotes(notes: CapturedNote[]): void;
-  appendTakeNote(note: CapturedNote): void;
+  setUncommittedNotes(notes: CapturedNote[]): void;
+  appendUncommittedNote(note: CapturedNote): void;
   setActiveLoopId(id: string | null): void;
   setPendingRegion(r: PendingRegion | null): void;
   setMidiDevices(devices: MidiDeviceInfo[], activeId: string | null): void;
@@ -108,7 +113,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
 
   selection: new Set<string>(),
   dragDelta: null,
-  takeNotes: [],
+  uncommittedNotes: [],
 
   activeLoopId: null,
   pendingRegion: null,
@@ -133,8 +138,9 @@ export const useSessionStore = create<SessionState>()((set) => ({
   setIsRecording: (isRecording) => set({ isRecording }),
   setSelection: (selection) => set({ selection }),
   setDragDelta: (dragDelta) => set({ dragDelta }),
-  setTakeNotes: (takeNotes) => set({ takeNotes }),
-  appendTakeNote: (note) => set((s) => ({ takeNotes: [...s.takeNotes, note] })),
+  setUncommittedNotes: (uncommittedNotes) => set({ uncommittedNotes }),
+  appendUncommittedNote: (note) =>
+    set((s) => ({ uncommittedNotes: [...s.uncommittedNotes, note] })),
   setActiveLoopId: (activeLoopId) => set({ activeLoopId }),
   setPendingRegion: (pendingRegion) => set({ pendingRegion }),
   setMidiDevices: (midiDevices, activeMidiDeviceId) =>

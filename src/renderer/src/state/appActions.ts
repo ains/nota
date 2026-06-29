@@ -70,8 +70,8 @@ export function initEngineBindings(): void {
 
   engine.midi.onDevicesChanged(() => syncMidiDevices());
   engine.midi.onActiveDeviceDisconnected(() => {
-    // Preserve an in-flight take rather than losing it to a dead device.
-    if (engine.isRecording) stopRecording(true);
+    // Recorded notes are already in the document; just end the session.
+    if (engine.isRecording) stopRecording();
     engine.transport.pause();
   });
 }
@@ -243,7 +243,7 @@ async function loadProjectFromFile(path: string, json: string): Promise<void> {
  * happens before stopping so the saved playhead is the current position.
  */
 export async function backToLibrary(): Promise<void> {
-  if (engine.isRecording) stopRecording(false);
+  if (engine.isRecording) stopRecording();
   const p = useProjectStore.getState();
   if (p.audio) await saveProject();
   engine.transport.stop();
@@ -305,7 +305,7 @@ export function togglePlay(): void {
 }
 
 export function stopTransport(): void {
-  if (engine.isRecording) stopRecording(true);
+  if (engine.isRecording) stopRecording();
   engine.transport.stop();
 }
 
@@ -404,38 +404,24 @@ export function discardPendingRegion(): void {
 
 export function startRecording(): void {
   const session = useSessionStore.getState();
-  session.setTakeNotes([]);
+  // Captured notes accumulate in the session's uncommittedNotes buffer: they
+  // render alongside committed notes for live feedback but stay out of the
+  // undoable document, then fold into the project as one undo step on stop.
+  session.setUncommittedNotes([]);
   engine.startRecording((note) =>
-    useSessionStore.getState().appendTakeNote(note),
+    useSessionStore.getState().appendUncommittedNote(note),
   );
   session.setIsRecording(true);
   if (!engine.transport.isPlaying) void engine.transport.play();
 }
 
-export function stopRecording(keep: boolean): void {
-  engine.stopRecording(keep);
+export function stopRecording(): void {
+  engine.stopRecording();
   const session = useSessionStore.getState();
+  const captured = session.uncommittedNotes;
+  if (captured.length > 0) useProjectStore.getState().addNotes(captured);
+  session.setUncommittedNotes([]);
   session.setIsRecording(false);
-  if (!keep) session.setTakeNotes([]);
-}
-
-/** Commit the captured take into the project as one undo step. */
-export function commitTake(): void {
-  const take = useSessionStore.getState().takeNotes;
-  if (take.length === 0) return;
-  useProjectStore.getState().addNotes(
-    take.map((n) => ({
-      midi: n.midi,
-      onsetSec: n.onsetSec,
-      durationSec: n.durationSec,
-      velocity: n.velocity,
-    })),
-  );
-  useSessionStore.getState().setTakeNotes([]);
-}
-
-export function discardTake(): void {
-  useSessionStore.getState().setTakeNotes([]);
 }
 
 export function getEngineRef(): ReturnType<typeof getEngine> {
