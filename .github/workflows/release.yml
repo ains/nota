@@ -51,11 +51,11 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -88,7 +88,7 @@ jobs:
         # electron-builder then packages arm64 + x64 and publishes the result.
         run: |
           npm run build
-          npx electron-builder --mac --arm64 --publish always
+          npx electron-builder --mac --arm64 --publish onTag
 
   release-windows:
     name: Build & publish (Windows)
@@ -99,11 +99,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -125,4 +125,4 @@ jobs:
         # package the NSIS x64 installer and publish it to the same draft release.
         run: |
           npm run build
-          npx electron-builder --win --x64 --publish always
+          npx electron-builder --win --x64 --publish onTag
