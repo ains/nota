@@ -73,4 +73,4 @@ jobs:
         # electron-builder then packages arm64 + x64 and publishes the result.
         run: |
           npm run build
-          npx electron-builder --mac --arm64 --x64 --publish always
+          npx electron-builder --mac --arm64 --publish always
