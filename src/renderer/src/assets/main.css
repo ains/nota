@@ -354,6 +354,7 @@ select {
   flex: 1;
   min-width: 0;
   background: var(--bg-panel);
+  overflow: hidden;
 }
 
 .loop-region {
