@@ -9,8 +9,6 @@ import {
   saveProject,
   togglePlay,
   stopTransport,
-  commitTake,
-  discardTake,
   selectMidiDevice,
   retryMidi,
   setPlaybackRate,
@@ -35,8 +33,6 @@ function TimeReadout(): JSX.Element {
 
 export function TransportBar(): JSX.Element {
   const isPlaying = useSessionStore((s) => s.isPlaying);
-  const isRecording = useSessionStore((s) => s.isRecording);
-  const takeNotes = useSessionStore((s) => s.takeNotes);
   const midiDevices = useSessionStore((s) => s.midiDevices);
   const activeMidiId = useSessionStore((s) => s.activeMidiDeviceId);
   const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
@@ -45,8 +41,6 @@ export function TransportBar(): JSX.Element {
   const midiError = useSessionStore((s) => s.midiError);
   const hasAudio = useProjectStore((s) => s.audio !== null);
   const dirty = useProjectStore((s) => s.dirty);
-
-  const hasTake = takeNotes.length > 0 && !isRecording;
 
   return (
     <div className="transport-bar">
@@ -83,20 +77,6 @@ export function TransportBar(): JSX.Element {
         >
           ⏹
         </button>
-        {hasTake && (
-          <>
-            <button
-              className="tb-commit"
-              onClick={commitTake}
-              title="Add take to transcription"
-            >
-              Keep Take ({takeNotes.length})
-            </button>
-            <button onClick={discardTake} title="Discard take">
-              Discard
-            </button>
-          </>
-        )}
         <select
           className="tb-speed"
           value={playbackRate}

@@ -19,10 +19,9 @@ import {
 
 const RESIZE_GRIP_PX = 6;
 
-// Monochrome notation: committed notes are filled ink heads; selected notes are
-// drawn as open (outlined) heads — quarter vs. half note — and takes are pencil.
+// Monochrome notation: notes are filled ink heads; selected notes are drawn as
+// open (outlined) heads — quarter vs. half note.
 const NOTE_COLOR = "#15140f";
-const TAKE_GHOST_COLOR = "#15140f";
 
 type DragState =
   | { kind: "move" | "resize"; startX: number; startY: number; moved: boolean }
@@ -39,8 +38,8 @@ export function PianoRoll(): JSX.Element {
   const viewport = useSessionStore((s) => s.viewport);
   const selection = useSessionStore((s) => s.selection);
   const dragDelta = useSessionStore((s) => s.dragDelta);
-  const takeNotes = useSessionStore((s) => s.takeNotes);
   const notes = useProjectStore((s) => s.notes);
+  const uncommittedNotes = useSessionStore((s) => s.uncommittedNotes);
   const containerRef = useRef<HTMLDivElement | null>(null);
   useTimelineWheel(containerRef);
   const [drag, setDrag] = useState<DragState>(null);
@@ -64,15 +63,14 @@ export function PianoRoll(): JSX.Element {
     }
 
     const drawNote = (
-      n: Note,
+      n: Omit<Note, "id">,
       fill: string,
-      opts?: { hollow?: boolean; alpha?: number },
+      opts?: { hollow?: boolean },
     ): void => {
       const x = secToPx(viewport, n.onsetSec);
       const wPx = Math.max(n.durationSec * viewport.pxPerSecond, 3);
       if (x + wPx < 0 || x > w) return;
       const y = midiToY(n.midi);
-      ctx.globalAlpha = opts?.alpha ?? 1;
       if (opts?.hollow) {
         ctx.strokeStyle = fill;
         ctx.lineWidth = 1.5;
@@ -81,29 +79,19 @@ export function PianoRoll(): JSX.Element {
         ctx.fillStyle = fill;
         ctx.fillRect(x, y + 1, wPx, ROW_H - 2);
       }
-      ctx.globalAlpha = 1;
     };
 
-    // Committed notes
+    // Notes
     for (const note of notes) {
       const selected = selection.has(note.id);
       const rendered = noteWithDelta(note, selected, dragDelta);
       drawNote(rendered, NOTE_COLOR, { hollow: selected });
     }
 
-    // Uncommitted take notes (ghosts)
-    for (const t of takeNotes) {
-      drawNote(
-        {
-          id: "",
-          midi: t.midi,
-          onsetSec: t.onsetSec,
-          durationSec: t.durationSec,
-          velocity: t.velocity,
-        },
-        TAKE_GHOST_COLOR,
-        { hollow: true, alpha: 0.4 },
-      );
+    // Notes from an in-progress recording: drawn the same as committed notes,
+    // but not yet part of the document (not selectable until the take commits).
+    for (const note of uncommittedNotes) {
+      drawNote(note, NOTE_COLOR);
     }
 
     // Marquee

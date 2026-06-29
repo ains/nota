@@ -184,7 +184,7 @@ function App(): JSX.Element {
       if (!cmd && e.key.toLowerCase() === "r") {
         e.preventDefault();
         const engine = getEngineRef();
-        if (engine.isRecording) stopRecording(true);
+        if (engine.isRecording) stopRecording();
         else startRecording();
         return;
       }

@@ -38,14 +38,13 @@ export class RecordingSession {
     this.unregister = this.registerMidiHandler((e) => this.onMidi(e));
   }
 
-  /** Returns the finished take; keep=false discards it. */
-  stop(keep: boolean): CapturedNote[] {
-    if (!this.recorder.isActive) return [];
-    const take = this.recorder.stop();
+  /** Ends the session. Notes are emitted live via onNote as they complete. */
+  stop(): void {
+    if (!this.recorder.isActive) return;
+    this.recorder.stop();
     this.onNote = null;
     this.unregister?.();
     this.unregister = null;
-    return keep ? take : [];
   }
 
   /** Maps the tap and accumulates it; only while the transport is playing. */
