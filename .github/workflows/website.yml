@@ -1,0 +1,53 @@
+name: Website
+
+# Publish the landing page (website/) to GitHub Pages.
+#
+# We deploy when a GitHub Release is *published* rather than on the tag push,
+# because the Release workflow uploads the macOS app to a **draft** release
+# first. Deploying on publish guarantees the "Download for macOS" link points
+# at an asset that is actually public, and hands us the version (the release
+# tag) to build the direct DMG URL.
+#
+# One-time setup: in the repo, Settings → Pages → Build and deployment →
+# Source must be set to "GitHub Actions" for this deploy to take effect.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {} # manual rebuild (falls back to the latest-release link)
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deployments at once; let an in-flight one finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & deploy to Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build website
+        env:
+          # Empty for workflow_dispatch — build.mjs then links to the latest
+          # release instead of a specific DMG.
+          NOTA_VERSION: ${{ github.event.release.tag_name }}
+        run: node website/build.mjs
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
