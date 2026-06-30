@@ -74,6 +74,8 @@ export interface SessionState {
   showPianoRoll: boolean;
   /** Whether the right-side volume drawer is shown */
   showVolumeDrawer: boolean;
+  /** Whether the settings modal is shown */
+  showSettings: boolean;
 
   setView(v: AppView): void;
   setViewport(vp: Viewport): void;
@@ -97,6 +99,7 @@ export interface SessionState {
   setPlaybackRate(v: number): void;
   setShowPianoRoll(b: boolean): void;
   setShowVolumeDrawer(b: boolean): void;
+  setShowSettings(b: boolean): void;
 }
 
 const audioSettings = loadAudioSettings();
@@ -128,6 +131,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   playbackRate: DEFAULT_PLAYBACK_RATE,
   showPianoRoll: false,
   showVolumeDrawer: false,
+  showSettings: false,
 
   setView: (view) => set({ view }),
   setViewport: (viewport) => set({ viewport }),
@@ -153,6 +157,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   setPlaybackRate: (playbackRate) => set({ playbackRate }),
   setShowPianoRoll: (showPianoRoll) => set({ showPianoRoll }),
   setShowVolumeDrawer: (showVolumeDrawer) => set({ showVolumeDrawer }),
+  setShowSettings: (showSettings) => set({ showSettings }),
 }));
 
 /** Apply an in-progress drag delta to a note for rendering. */

@@ -281,8 +281,20 @@ select {
   width: 90px;
 }
 
-.tb-midi-error {
-  font-style: italic;
+.tb-settings {
+  /* Anchor for the absolutely-positioned MIDI-unavailable marker. */
+  position: relative;
+}
+
+/* Small warning marker on the cog when MIDI is unavailable. */
+.tb-settings-warn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--rec);
+  pointer-events: none;
 }
 
 /* ---- editor body (timeline + side drawer) ---- */
@@ -694,4 +706,33 @@ select {
 
 .cal-slider input {
   flex: 1;
+}
+
+/* ---- settings modal ---- */
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.settings-row > label {
+  color: var(--text-dim);
+}
+
+.settings-row select {
+  min-width: 180px;
+}
+
+.settings-midi-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Settings actions sit at the trailing edge (Close · Save). */
+.settings-actions {
+  justify-content: flex-end;
 }

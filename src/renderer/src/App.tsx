@@ -11,6 +11,7 @@ import { PianoRoll } from "./components/pianoroll/PianoRoll";
 import { KeysGutter } from "./components/pianoroll/KeysGutter";
 import { RollOptionsBar } from "./components/pianoroll/RollOptionsBar";
 import { VolumeDrawer } from "./components/volume/VolumeDrawer";
+import { SettingsModal } from "./components/settings/SettingsModal";
 import { Library } from "./components/library/Library";
 import {
   initEngineBindings,
@@ -120,6 +121,7 @@ function App(): JSX.Element {
   const view = useSessionStore((s) => s.view);
   const showPianoRoll = useSessionStore((s) => s.showPianoRoll);
   const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
+  const showSettings = useSessionStore((s) => s.showSettings);
   const projectPath = useProjectStore((s) => s.projectPath);
 
   useEffect(() => {
@@ -155,6 +157,10 @@ function App(): JSX.Element {
         target.tagName === "TEXTAREA"
       )
         return;
+
+      // The settings modal owns the keyboard while open (it handles Escape in
+      // its own capture-phase listener); don't fire editor shortcuts under it.
+      if (useSessionStore.getState().showSettings) return;
 
       const cmd = e.metaKey || e.ctrlKey;
       // Open dialogs work from either screen; everything else is editor-only.
@@ -250,6 +256,7 @@ function App(): JSX.Element {
       </div>
       <BottomBar />
       <NudgeHud />
+      {showSettings && <SettingsModal />}
     </div>
   );
 }
