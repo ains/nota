@@ -36,10 +36,10 @@ macOS signing + notarization (required for the macOS build):
 
 Windows signing (optional — omit to ship an unsigned installer):
 
-| Secret                       | What it is                                     |
-| ---------------------------- | ---------------------------------------------- |
-| `WINDOWS_CSC_LINK`           | Base64 of your Authenticode certificate (.pfx) |
-| `WINDOWS_CSC_KEY_PASSWORD`   | Password for that certificate                  |
+| Secret                     | What it is                                     |
+| -------------------------- | ---------------------------------------------- |
+| `WINDOWS_CSC_LINK`         | Base64 of your Authenticode certificate (.pfx) |
+| `WINDOWS_CSC_KEY_PASSWORD` | Password for that certificate                  |
 
 Local `npm run build:mac` still produces a host-architecture build and skips
 notarization — it only runs in CI, where the Apple credentials live.
