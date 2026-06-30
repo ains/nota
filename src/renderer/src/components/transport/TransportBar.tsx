@@ -9,8 +9,6 @@ import {
   saveProject,
   togglePlay,
   stopTransport,
-  selectMidiDevice,
-  retryMidi,
   setPlaybackRate,
   getEngineRef,
 } from "../../state/appActions";
@@ -33,10 +31,9 @@ function TimeReadout(): JSX.Element {
 
 export function TransportBar(): JSX.Element {
   const isPlaying = useSessionStore((s) => s.isPlaying);
-  const midiDevices = useSessionStore((s) => s.midiDevices);
-  const activeMidiId = useSessionStore((s) => s.activeMidiDeviceId);
   const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
   const setShowVolumeDrawer = useSessionStore((s) => s.setShowVolumeDrawer);
+  const setShowSettings = useSessionStore((s) => s.setShowSettings);
   const playbackRate = useSessionStore((s) => s.playbackRate);
   const midiError = useSessionStore((s) => s.midiError);
   const hasAudio = useProjectStore((s) => s.audio !== null);
@@ -101,30 +98,15 @@ export function TransportBar(): JSX.Element {
         >
           🎚 Audio controls
         </button>
-        {midiError ? (
-          <button
-            className="tb-midi-error"
-            onClick={() => void retryMidi()}
-            title={`${midiError} — click to retry`}
-          >
-            ⚠ MIDI unavailable — retry
-          </button>
-        ) : (
-          <select
-            value={activeMidiId ?? ""}
-            onChange={(e) => selectMidiDevice(e.target.value || null)}
-            title="MIDI input device"
-          >
-            {midiDevices.length === 0 && (
-              <option value="">No MIDI input</option>
-            )}
-            {midiDevices.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        )}
+        <button
+          className="tb-settings"
+          onClick={() => setShowSettings(true)}
+          title={midiError ? `Settings — ${midiError}` : "Settings"}
+          aria-label="Settings"
+        >
+          ⚙ Settings
+          {midiError && <span className="tb-settings-warn">⚠</span>}
+        </button>
       </div>
     </div>
   );
