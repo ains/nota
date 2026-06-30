@@ -9,19 +9,21 @@ npm run lint
 npm run build:mac  # or build:win / build:linux
 ```
 
-### Releasing (signed + notarized macOS builds)
+### Releasing (macOS + Windows builds)
 
 Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml),
-which builds, **code-signs, and notarizes** arm64 + x64 macOS builds and uploads the
-DMGs/zips to a **draft** GitHub Release for you to review and publish:
+which builds and uploads macOS and Windows installers to a **draft** GitHub Release
+for you to review and publish:
 
 ```bash
 npm version 1.2.3      # bump package.json + create the v1.2.3 tag
 git push --follow-tags
 ```
 
-It needs six repository secrets (Settings → Secrets and variables → Actions); the
+It needs repository secrets (Settings → Secrets and variables → Actions); the
 workflow header documents exactly how to generate each:
+
+macOS signing + notarization (required for the macOS build):
 
 | Secret                 | What it is                                                   |
 | ---------------------- | ------------------------------------------------------------ |
@@ -31,6 +33,13 @@ workflow header documents exactly how to generate each:
 | `APPLE_API_KEY_ID`     | The API key's 10-char Key ID                                 |
 | `APPLE_API_ISSUER`     | The API key Issuer ID (UUID)                                 |
 | `APPLE_TEAM_ID`        | Your Apple Developer Team ID                                 |
+
+Windows signing (optional — omit to ship an unsigned installer):
+
+| Secret                     | What it is                                     |
+| -------------------------- | ---------------------------------------------- |
+| `WINDOWS_CSC_LINK`         | Base64 of your Authenticode certificate (.pfx) |
+| `WINDOWS_CSC_KEY_PASSWORD` | Password for that certificate                  |
 
 Local `npm run build:mac` still produces a host-architecture build and skips
 notarization — it only runs in CI, where the Apple credentials live.
