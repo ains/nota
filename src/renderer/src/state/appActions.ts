@@ -37,7 +37,7 @@ export function initEngineBindings(): void {
   // Apply the persisted audio-control mix (seeded into the session store from
   // localStorage) to the engine on boot.
   const session = useSessionStore.getState();
-  engine.scheduler.setMuted(session.synthMuted);
+  engine.transport.setSynthMuted(session.synthMuted);
   engine.transport.setAudioMuted(session.audioMuted);
   engine.transport.setMusicVolume(session.musicVolume);
   engine.transport.setSynthVolume(session.synthVolume);
@@ -319,7 +319,7 @@ export function setAudioMuted(muted: boolean): void {
 }
 
 export function setSynthMuted(muted: boolean): void {
-  engine.scheduler.setMuted(muted);
+  engine.transport.setSynthMuted(muted);
   useSessionStore.getState().setSynthMuted(muted);
 }
 
