@@ -61,6 +61,9 @@ export class Transport {
   /** Music mute/volume are composed onto audioGain; keep both to recombine. */
   private audioMuted = false;
   private audioVolume = 1;
+  /** Synth mute/volume are composed onto synthGain; keep both to recombine. */
+  private synthMuted = false;
+  private synthVolume = 1;
 
   private state: TransportState = "stopped";
   private startCtx = 0;
@@ -345,9 +348,19 @@ export class Transport {
     this.audioGain.gain.value = this.audioMuted ? 0 : this.audioVolume;
   }
 
-  /** Synth (sampler) playback volume (0..1). */
+  /** Synth (sampler) playback volume (0..1), independent of mute. */
   setSynthVolume(volume: number): void {
-    this.synthGain.gain.value = volume;
+    this.synthVolume = volume;
+    this.applySynthGain();
+  }
+
+  setSynthMuted(muted: boolean): void {
+    this.synthMuted = muted;
+    this.applySynthGain();
+  }
+
+  private applySynthGain(): void {
+    this.synthGain.gain.value = this.synthMuted ? 0 : this.synthVolume;
   }
 
   /** Master output volume (0..1), applied to audio + synth alike. */
