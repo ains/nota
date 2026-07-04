@@ -80,7 +80,10 @@ export function TransportBar(): JSX.Element {
         <select
           className="tb-speed"
           value={playbackRate}
-          onChange={(e) => setPlaybackRate(Number(e.target.value))}
+          onChange={(e) => {
+            setPlaybackRate(Number(e.target.value));
+            e.target.blur();
+          }}
           disabled={!hasAudio}
           title="Playback speed (pitch preserved)"
         >
