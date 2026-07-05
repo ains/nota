@@ -80,7 +80,10 @@ export function TransportBar(): JSX.Element {
         <select
           className="tb-speed"
           value={playbackRate}
-          onChange={(e) => setPlaybackRate(Number(e.target.value))}
+          onChange={(e) => {
+            setPlaybackRate(Number(e.target.value));
+            requestAnimationFrame(() => e.currentTarget.blur());
+          }}
           disabled={!hasAudio}
           title="Playback speed (pitch preserved)"
         >
@@ -112,7 +115,10 @@ export function TransportBar(): JSX.Element {
         ) : (
           <select
             value={activeMidiId ?? ""}
-            onChange={(e) => selectMidiDevice(e.target.value || null)}
+            onChange={(e) => {
+              selectMidiDevice(e.target.value || null);
+              requestAnimationFrame(() => e.currentTarget.blur());
+            }}
             title="MIDI input device"
           >
             {midiDevices.length === 0 && (

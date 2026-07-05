@@ -27,7 +27,10 @@ function VolumeRow({
           <input
             type="checkbox"
             checked={enabled}
-            onChange={(e) => onToggle(e.target.checked)}
+            onChange={(e) => {
+              onToggle(e.target.checked);
+              requestAnimationFrame(() => e.currentTarget.blur());
+            }}
           />
           {label}
         </label>
@@ -41,6 +44,7 @@ function VolumeRow({
         value={value}
         disabled={!enabled}
         onChange={(e) => onChange(Number(e.target.value))}
+        onPointerUp={(e) => requestAnimationFrame(() => e.currentTarget.blur())}
       />
     </div>
   );
