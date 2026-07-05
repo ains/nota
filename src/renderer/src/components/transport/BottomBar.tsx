@@ -16,6 +16,9 @@ export function BottomBar(): JSX.Element {
           step={0.001}
           value={zoomToSlider(pxPerSecond)}
           onChange={(e) => setZoom(sliderToZoom(Number(e.target.value)))}
+          onPointerUp={(e) =>
+            requestAnimationFrame(() => e.currentTarget.blur())
+          }
         />
       </label>
     </div>

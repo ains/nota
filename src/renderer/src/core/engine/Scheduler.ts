@@ -18,7 +18,6 @@ export class Scheduler {
   private timer: ReturnType<typeof setInterval> | null = null;
   /** Time-sorted by onset. */
   private notes: Note[] = [];
-  private muted = false;
   /** Keys of (noteId, loopPass) already scheduled, pruned as voices end. */
   private issued = new Set<string>();
 
@@ -33,15 +32,6 @@ export class Scheduler {
     this.notes = [...notes].sort((x, y) => x.onsetSec - y.onsetSec);
     // Conservative: drop pending voices so edits/deletes take effect immediately.
     this.resetPending();
-  }
-
-  setMuted(muted: boolean): void {
-    this.muted = muted;
-    if (muted) this.resetPending();
-  }
-
-  get isMuted(): boolean {
-    return this.muted;
   }
 
   private onTransportChange(): void {
@@ -72,8 +62,7 @@ export class Scheduler {
   }
 
   private tick(): void {
-    if (this.muted || !this.transport.isPlaying || this.notes.length === 0)
-      return;
+    if (!this.transport.isPlaying || this.notes.length === 0) return;
 
     const ctx = this.transport.ctx;
     const { startCtx, songOffset, rate } = this.transport.anchor;
