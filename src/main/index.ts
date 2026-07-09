@@ -1,8 +1,9 @@
-import { app, shell, BrowserWindow } from "electron";
+import { app, shell, BrowserWindow, ipcMain } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { registerIpcHandlers } from "./ipcHandlers";
+import { IPC } from "../shared/ipc";
 
 // The lookahead scheduler must keep ticking when the window is occluded or the
 // user switches to a score PDF — otherwise synth playback stalls mid-take.
@@ -11,8 +12,36 @@ app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 // AudioContext must run without a user gesture (transport is app-driven).
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 
+let mainWindow: BrowserWindow | null = null;
+// Project bundles macOS asks us to open (double-click in Finder). Paths that
+// arrive before the renderer is ready are queued and drained on first mount.
+const pendingOpenPaths: string[] = [];
+let rendererReady = false;
+
+function deliverOpenPath(path: string): void {
+  if (rendererReady && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(IPC.projectOpened, path);
+  } else {
+    pendingOpenPaths.push(path);
+  }
+}
+
+// Registered at module load so it catches the open-file event macOS fires at
+// launch when the app is started by opening a .nota package.
+app.on("open-file", (event, path) => {
+  event.preventDefault();
+  deliverOpenPath(path);
+});
+
+ipcMain.handle(IPC.consumeOpenPath, (): string[] => {
+  rendererReady = true;
+  return pendingOpenPaths.splice(0);
+});
+
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  // A fresh renderer must re-announce itself before we push live opens to it.
+  rendererReady = false;
+  const win = new BrowserWindow({
     width: 1280,
     height: 840,
     minWidth: 900,
@@ -26,12 +55,16 @@ function createWindow(): void {
       backgroundThrottling: false,
     },
   });
+  mainWindow = win;
+  win.on("closed", () => {
+    if (mainWindow === win) mainWindow = null;
+  });
 
   // Web MIDI is permission-gated in Chromium; without BOTH handlers,
   // navigator.requestMIDIAccess() rejects silently in Electron.
   // Chromium gates ALL Web MIDI access behind 'midiSysex' (even
   // requestMIDIAccess({ sysex: false })), so both names must be allowed.
-  mainWindow.webContents.session.setPermissionRequestHandler(
+  win.webContents.session.setPermissionRequestHandler(
     (_webContents, permission, callback) => {
       if (permission === "midi" || permission === "midiSysex") {
         callback(true);
@@ -41,7 +74,7 @@ function createWindow(): void {
     },
   );
 
-  mainWindow.webContents.session.setPermissionCheckHandler(
+  win.webContents.session.setPermissionCheckHandler(
     (_webContents, permission) => {
       if (permission === "midi" || permission === "midiSysex") {
         return true;
@@ -50,20 +83,20 @@ function createWindow(): void {
     },
   );
 
-  mainWindow.on("ready-to-show", () => {
-    mainWindow.maximize();
-    mainWindow.show();
+  win.on("ready-to-show", () => {
+    win.maximize();
+    win.show();
   });
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url);
     return { action: "deny" };
   });
 
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
+    win.loadURL(process.env["ELECTRON_RENDERER_URL"]);
   } else {
-    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+    win.loadFile(join(__dirname, "../renderer/index.html"));
   }
 }
 

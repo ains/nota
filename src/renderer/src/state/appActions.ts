@@ -101,11 +101,10 @@ export function selectMidiDevice(id: string | null): void {
 
 /** Record a saved project in the library of recently opened projects. */
 function recordRecent(path: string, audioFileName: string): void {
-  const name =
-    path
-      .split("/")
-      .pop()
-      ?.replace(/\.[^.]+$/, "") ?? "project";
+  // path is a bundle directory (e.g. ".../Yesterday.nota"); show its name
+  // without the extension. Split on both separators so Windows paths work.
+  const base = path.split(/[/\\]/).pop() ?? "project";
+  const name = base.replace(/\.[^.]+$/, "") || base;
   addRecentProject({ path, name, audioFileName });
 }
 
@@ -198,15 +197,16 @@ async function loadProjectFromFile(path: string, json: string): Promise<void> {
     return;
   }
 
-  let audioFile = await window.nota.readAudioFile(data.audio.absolutePath);
+  // The audio lives inside the bundle beside the state file; load that copy.
+  const audioFile = await window.nota.readProjectAudio(
+    path,
+    data.audio.fileName,
+  );
   if (!audioFile) {
-    audioFile = await window.nota.relinkAudio(data.audio.fileName);
-    if (!audioFile) return;
-  }
-  if (audioFile.sha256 !== data.audio.sha256) {
-    console.warn(
-      "Audio file content differs from the one this project was created with.",
+    console.error(
+      `Project bundle is missing its audio file "${data.audio.fileName}".`,
     );
+    return;
   }
 
   useProjectStore.getState().loadProject({
@@ -218,8 +218,8 @@ async function loadProjectFromFile(path: string, json: string): Promise<void> {
   clearHistory();
   useSessionStore.getState().setActiveLoopId(null);
   await loadAudioIntoApp(audioFile, false);
-  // loadAudioIntoApp(asNewProject=false) already set the (possibly relinked)
-  // audio ref and a fit-to-window viewport; restore the saved view over it.
+  // loadAudioIntoApp(asNewProject=false) already set the audio ref and a
+  // fit-to-window viewport; restore the saved view over it.
   if (data.view) {
     const session = useSessionStore.getState();
     const { pxPerSecond, scrollSec, playheadSec } = data.view;
@@ -270,10 +270,17 @@ export async function saveProject(saveAs = false): Promise<void> {
     recordRecent(p.projectPath, p.audio.fileName);
   } else {
     const suggested = p.audio.fileName.replace(/\.[^.]+$/, "");
-    const path = await window.nota.saveProjectAs(json, suggested);
-    if (path) {
-      p.markSaved(path);
-      recordRecent(path, p.audio.fileName);
+    // saveProjectAs creates the bundle and copies the current audio into it;
+    // markSaved then repoints the audio ref at that bundled copy.
+    const result = await window.nota.saveProjectAs(
+      json,
+      suggested,
+      p.audio.absolutePath,
+      p.audio.fileName,
+    );
+    if (result) {
+      p.markSaved(result.projectPath, result.audioPath);
+      recordRecent(result.projectPath, p.audio.fileName);
     }
   }
 }

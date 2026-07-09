@@ -12,7 +12,7 @@ export interface ProjectState {
   audio: AudioRef | null;
   notes: Note[];
   loopRegions: LoopRegion[];
-  /** Path of the open .nota file, null = never saved */
+  /** Path of the open .nota project bundle, null = never saved */
   projectPath: string | null;
   dirty: boolean;
 
@@ -30,7 +30,7 @@ export interface ProjectState {
     projectPath: string;
   }): void;
   newProject(audio: AudioRef): void;
-  markSaved(path: string): void;
+  markSaved(path: string, audioAbsolutePath?: string): void;
 }
 
 export const useProjectStore = create<ProjectState>()(
@@ -108,7 +108,17 @@ export const useProjectStore = create<ProjectState>()(
           dirty: true,
         }),
 
-      markSaved: (path) => set({ projectPath: path, dirty: false }),
+      // After a save-as the audio now lives inside the new bundle; repoint the
+      // ref at that copy so later saves and reloads no longer touch the source.
+      markSaved: (path, audioAbsolutePath) =>
+        set((s) => ({
+          projectPath: path,
+          dirty: false,
+          audio:
+            audioAbsolutePath && s.audio
+              ? { ...s.audio, absolutePath: audioAbsolutePath }
+              : s.audio,
+        })),
     }),
     {
       partialize: (s) => ({ notes: s.notes, loopRegions: s.loopRegions }),

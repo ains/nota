@@ -15,6 +15,16 @@ asarUnpack:
   - resources/**
 electronLanguages:
   - en-US
+# A Nota project is a directory named "*.nota". On macOS, isPackage marks it as
+# a document package (LSTypeIsPackage) so Finder shows it as a single
+# double-clickable file; double-clicking delivers the path via the open-file
+# event. On Windows/Linux it remains an ordinary folder.
+fileAssociations:
+  - ext: nota
+    name: Nota Project
+    role: Editor
+    rank: Owner
+    isPackage: true
 win:
   executableName: nota
   icon: resources/icon.ico

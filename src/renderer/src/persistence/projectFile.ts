@@ -1,7 +1,7 @@
-/** (De)serialization of .nota project files with version migration. */
+/** (De)serialization of the project state file with version migration. */
 import {
   PROJECT_VERSION,
-  type AudioRef,
+  type StoredAudio,
   type LoopRegion,
   type Note,
   type Project,
@@ -9,7 +9,7 @@ import {
 } from "@shared/types/project";
 
 export interface ProjectData {
-  audio: AudioRef;
+  audio: StoredAudio;
   notes: Note[];
   loopRegions: LoopRegion[];
   /** Absent for files saved before view state existed. */
@@ -19,7 +19,13 @@ export interface ProjectData {
 export function serializeProject(data: ProjectData): string {
   const project: Project = {
     version: PROJECT_VERSION,
-    audio: data.audio,
+    // Persist only the stored audio metadata; the bytes live in the bundle
+    // beside this file, so the runtime absolutePath is never written out.
+    audio: {
+      fileName: data.audio.fileName,
+      sha256: data.audio.sha256,
+      durationSec: data.audio.durationSec,
+    },
     notes: data.notes,
     loopRegions: data.loopRegions,
     view: data.view,
@@ -68,11 +74,19 @@ export function deserializeProject(json: string): ProjectData {
   }
   // Future migrations: if (version === 1) raw = migrateV1toV2(raw) ...
   const project = obj as unknown as Project;
-  if (!project.audio || !Array.isArray(project.notes)) {
+  if (
+    !project.audio ||
+    typeof project.audio.fileName !== "string" ||
+    !Array.isArray(project.notes)
+  ) {
     throw new ProjectParseError("Project file is missing required fields");
   }
   return {
-    audio: project.audio,
+    audio: {
+      fileName: project.audio.fileName,
+      sha256: project.audio.sha256,
+      durationSec: project.audio.durationSec,
+    },
     notes: project.notes,
     loopRegions: project.loopRegions ?? [],
     view: parseView(project.view),

@@ -65,7 +65,7 @@ export function Library(): JSX.Element {
           title="Browse for a project file"
         >
           <span className="project-name">Open project…</span>
-          <span className="project-audio">Browse for a .nota file</span>
+          <span className="project-audio">Browse for a .nota project</span>
         </button>
         {recents.map((p) => (
           <button
