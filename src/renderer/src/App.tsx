@@ -128,12 +128,13 @@ function App(): JSX.Element {
   }, []);
 
   // Open project bundles launched from Finder (double-click a .nota package):
-  // drain any cold-start path, then handle live opens while running.
+  // drain any cold-start path, then handle live opens while running. The
+  // bridge is absent outside Electron (e.g. the dev:web build), so guard it.
   useEffect(() => {
-    const off = window.nota.onOpenProject(
+    const off = window.nota?.onOpenProject(
       (path) => void openProjectByPath(path),
     );
-    void window.nota.consumeOpenPath().then((paths) => {
+    void window.nota?.consumeOpenPath().then((paths) => {
       for (const path of paths) void openProjectByPath(path);
     });
     return off;
