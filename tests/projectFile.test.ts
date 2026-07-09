@@ -85,4 +85,40 @@ describe("project file round-trip", () => {
     });
     expect(deserializeProject(json).view).toBeUndefined();
   });
+
+  it("round-trips stem metadata", () => {
+    const withStems = {
+      ...sample,
+      stems: {
+        modelId: "htdemucs",
+        sourceSha256: "abc123",
+        fileNames: {
+          drums: "drums.wav",
+          bass: "bass.wav",
+          other: "other.wav",
+          vocals: "vocals.wav",
+        },
+      },
+    };
+    const back = deserializeProject(serializeProject(withStems));
+    expect(back.stems).toEqual(withStems.stems);
+  });
+
+  it("leaves stems undefined for files without them", () => {
+    expect(deserializeProject(serializeProject(sample)).stems).toBeUndefined();
+  });
+
+  it("ignores a stems block with a missing stem file", () => {
+    const json = JSON.stringify({
+      version: 1,
+      audio: sample.audio,
+      notes: [],
+      stems: {
+        modelId: "htdemucs",
+        sourceSha256: "abc123",
+        fileNames: { drums: "drums.wav" },
+      },
+    });
+    expect(deserializeProject(json).stems).toBeUndefined();
+  });
 });

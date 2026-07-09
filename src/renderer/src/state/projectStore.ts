@@ -6,17 +6,25 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import { nanoid } from "nanoid";
-import type { AudioRef, LoopRegion, Note } from "@shared/types/project";
+import type {
+  AudioRef,
+  LoopRegion,
+  Note,
+  StoredStems,
+} from "@shared/types/project";
 
 export interface ProjectState {
   audio: AudioRef | null;
   notes: Note[];
   loopRegions: LoopRegion[];
+  /** Separated-stem metadata; the stem audio lives in the bundle. */
+  stems: StoredStems | null;
   /** Path of the open .nota project bundle, null = never saved */
   projectPath: string | null;
   dirty: boolean;
 
   setAudio(audio: AudioRef | null): void;
+  setStems(stems: StoredStems | null): void;
   addNotes(notes: Omit<Note, "id">[]): Note[];
   updateNotes(updates: Map<string, Partial<Omit<Note, "id">>>): void;
   deleteNotes(ids: ReadonlySet<string>): void;
@@ -27,6 +35,7 @@ export interface ProjectState {
     audio: AudioRef;
     notes: Note[];
     loopRegions: LoopRegion[];
+    stems: StoredStems | null;
     projectPath: string;
   }): void;
   newProject(audio: AudioRef): void;
@@ -39,10 +48,13 @@ export const useProjectStore = create<ProjectState>()(
       audio: null,
       notes: [],
       loopRegions: [],
+      stems: null,
       projectPath: null,
       dirty: false,
 
       setAudio: (audio) => set({ audio, dirty: true }),
+
+      setStems: (stems) => set({ stems, dirty: true }),
 
       addNotes: (newNotes) => {
         const withIds = newNotes.map((n) => ({ ...n, id: nanoid(10) }));
@@ -95,6 +107,7 @@ export const useProjectStore = create<ProjectState>()(
           audio: data.audio,
           notes: data.notes,
           loopRegions: data.loopRegions,
+          stems: data.stems,
           projectPath: data.projectPath,
           dirty: false,
         }),
@@ -104,6 +117,7 @@ export const useProjectStore = create<ProjectState>()(
           audio,
           notes: [],
           loopRegions: [],
+          stems: null,
           projectPath: null,
           dirty: true,
         }),

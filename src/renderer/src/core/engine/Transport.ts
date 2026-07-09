@@ -40,12 +40,36 @@ export class Transport {
   private src: AudioBufferSourceNode | null = null;
 
   /**
+   * Separated stem buffers (one stereo AudioBuffer per stem, in stem order).
+   * When set, playback uses one source per stem — each through its own gain
+   * into audioGain, so the "Music" volume stays the group control — instead
+   * of the single source over `buffer`. `buffer` remains the timeline's
+   * source of truth (duration, peaks); stem lengths may differ by a few
+   * samples after the separator's internal resampling round-trip.
+   */
+  private stemBuffers: AudioBuffer[] | null = null;
+  private stemSrcs: AudioBufferSourceNode[] = [];
+  private stemGains: GainNode[] = [];
+  private stemVolumes: number[] = [];
+  private stemMutes: boolean[] = [];
+
+  /**
    * Rubber Band source node, created up front in loadAudio (so play() can stay
    * synchronous) and reused. Created per channel count (output channels are
    * fixed at construction), connected to audioGain.
    */
   private rbNode: RubberBandNode | null = null;
   private rbNodeChannels = 0;
+  /** Whether the current rbNode was built for stem (multi-pair) playback. */
+  private rbForStems = false;
+  /**
+   * Fan-out for stem playback through the Rubber Band node: the node carries
+   * all stems as one interleaved multi-channel stream, and this splitter (plus
+   * per-stem mergers) routes each stereo pair through its stem gain so volume
+   * changes stay live while time-stretched.
+   */
+  private rbSplitter: ChannelSplitterNode | null = null;
+  private rbMergers: ChannelMergerNode[] = [];
   /** What audio is currently loaded into rbNode: "whole", "Ls:Le", or null. */
   private rbLoadedKey: string | null = null;
   /** True while the Rubber Band node is the active source. */
@@ -95,6 +119,21 @@ export class Transport {
     return this.buffer?.duration ?? 0;
   }
 
+  /** The decoded source audio (input for stem separation). */
+  get audioBuffer(): AudioBuffer | null {
+    return this.buffer;
+  }
+
+  /** True when separated stems are loaded and drive playback. */
+  get stemsActive(): boolean {
+    return this.stemBuffers !== null;
+  }
+
+  /** The loaded stem buffers (stem order), or null when none are loaded. */
+  getStemBuffers(): AudioBuffer[] | null {
+    return this.stemBuffers;
+  }
+
   get loopSpan(): LoopSpan | null {
     return this.loop;
   }
@@ -123,13 +162,14 @@ export class Transport {
     this.stopInternal();
     this.pausedPos = 0;
     this.playStartPos = 0;
+    this.clearStems();
     // decodeAudioData detaches the buffer; callers must not reuse `bytes`.
     const buffer = await this.ctx.decodeAudioData(bytes);
     // Resume the context (load is a user gesture) and fully build the Rubber
     // Band node for this channel count BEFORE exposing the buffer, so play()
     // can stay synchronous: whenever `buffer` is set, the node is ready too.
     void this.ctx.resume();
-    await this.ensureRbNode(buffer.numberOfChannels);
+    await this.ensureRbNode(buffer.numberOfChannels, false);
     this.buffer = buffer;
     this.rbLoadedKey = null; // node holds no/old audio until first play loads it
     this.emit();
@@ -137,25 +177,112 @@ export class Transport {
   }
 
   /**
-   * Create (or recreate, on a channel-count change) the Rubber Band source
-   * node and wire it to audioGain. Awaited from loadAudio; callers are
-   * serialised, so no in-flight de-duplication is needed.
+   * Load separated stems (one stereo buffer per stem, in stem order) and
+   * switch playback over to them, or clear them with null to fall back to the
+   * plain source audio. Like loadAudio, the Rubber Band node is rebuilt before
+   * the switch is visible so play() stays synchronous. Restarts in place when
+   * called mid-playback.
    */
-  private async ensureRbNode(channels: number): Promise<void> {
-    if (this.rbNode && this.rbNodeChannels === channels) return;
+  async setStems(buffers: AudioBuffer[] | null): Promise<void> {
+    const pos = this.position;
+    const wasPlaying = this.state === "playing";
+    if (buffers === null) {
+      if (!this.stemBuffers) return;
+      this.stopInternal();
+      this.clearStems();
+      if (this.buffer) {
+        await this.ensureRbNode(this.buffer.numberOfChannels, false);
+      }
+    } else {
+      this.stopInternal();
+      this.clearStems();
+      // All stems flow through one Rubber Band node as interleaved stereo
+      // pairs; per-stem gains hang off the fan-out built in ensureRbNode.
+      await this.ensureRbNode(buffers.length * 2, true);
+      this.stemBuffers = buffers;
+      this.stemGains = buffers.map((_, i) => {
+        const gain = this.ctx.createGain();
+        gain.gain.value = this.stemGainValue(i);
+        gain.connect(this.audioGain);
+        return gain;
+      });
+      this.connectRbFanOut();
+    }
+    this.rbLoadedKey = null;
+    if (wasPlaying) {
+      this.play(pos);
+    } else {
+      this.emit();
+    }
+  }
+
+  private clearStems(): void {
+    for (const gain of this.stemGains) gain.disconnect();
+    this.stemGains = [];
+    this.stemBuffers = null;
+  }
+
+  /**
+   * Create (or recreate, on a channel-count or wiring change) the Rubber Band
+   * source node. Plain playback wires it straight to audioGain; stem playback
+   * splits its interleaved output into stereo pairs, one merger per stem
+   * (connected to the stem gains in connectRbFanOut once those exist).
+   * Awaited from loadAudio/setStems; callers are serialised, so no in-flight
+   * de-duplication is needed.
+   */
+  private async ensureRbNode(
+    channels: number,
+    forStems: boolean,
+  ): Promise<void> {
+    if (
+      this.rbNode &&
+      this.rbNodeChannels === channels &&
+      this.rbForStems === forStems
+    ) {
+      return;
+    }
     if (this.rbNode) {
       this.rbNode.close();
       this.rbNode = null;
     }
+    this.teardownRbFanOut();
     this.rbLoadedKey = null;
     this.rbNodeChannels = channels;
+    this.rbForStems = forStems;
     const node = await RubberBandNode.create(this.ctx, {
       processorUrl: rubberbandProcessorUrl,
       wasmUrl: rubberbandWasmUrl,
       channelCount: channels,
     });
-    node.connect(this.audioGain);
+    if (forStems) {
+      const splitter = this.ctx.createChannelSplitter(channels);
+      node.connect(splitter);
+      this.rbSplitter = splitter;
+      for (let i = 0; i < channels / 2; i++) {
+        const merger = this.ctx.createChannelMerger(2);
+        splitter.connect(merger, 2 * i, 0);
+        splitter.connect(merger, 2 * i + 1, 1);
+        this.rbMergers.push(merger);
+      }
+    } else {
+      node.connect(this.audioGain);
+    }
     this.rbNode = node;
+  }
+
+  /** Connect the per-stem mergers to the (freshly created) stem gains. */
+  private connectRbFanOut(): void {
+    this.rbMergers.forEach((merger, i) => {
+      const gain = this.stemGains[i];
+      if (gain) merger.connect(gain);
+    });
+  }
+
+  private teardownRbFanOut(): void {
+    this.rbSplitter?.disconnect();
+    this.rbSplitter = null;
+    for (const merger of this.rbMergers) merger.disconnect();
+    this.rbMergers = [];
   }
 
   // --- transport ---
@@ -196,6 +323,10 @@ export class Transport {
 
   /** Native, sample-accurate path (rate 1). */
   private startNative(pos: number): void {
+    if (this.stemBuffers) {
+      this.startNativeStems(pos);
+      return;
+    }
     const buffer = this.buffer!;
     const src = new AudioBufferSourceNode(this.ctx, { buffer });
     if (this.loop) {
@@ -218,6 +349,50 @@ export class Transport {
     this.activeIsRb = false;
   }
 
+  /**
+   * Native path with stems: one source per stem, each through its own gain.
+   * All sources share the same explicit future start time and offset, so they
+   * stay sample-locked; the first one reports the natural end (stems are the
+   * same length to within a few samples).
+   */
+  private startNativeStems(pos: number): void {
+    const buffers = this.stemBuffers!;
+    this.startCtx = this.ctx.currentTime + START_DELAY_SEC;
+    this.songOffset = pos;
+    const srcs = buffers.map((buffer, i) => {
+      const src = new AudioBufferSourceNode(this.ctx, { buffer });
+      if (this.loop) {
+        src.loop = true;
+        src.loopStart = this.loop.start;
+        src.loopEnd = Math.min(this.loop.end, buffer.duration);
+      }
+      src.connect(this.stemGains[i]);
+      src.start(this.startCtx, Math.min(pos, buffer.duration));
+      return src;
+    });
+    srcs[0].onended = () => {
+      if (this.stemSrcs[0] === srcs[0] && this.state === "playing") {
+        this.stopStemSrcs();
+        this.finishAtEnd();
+      }
+    };
+    this.stemSrcs = srcs;
+    this.activeIsRb = false;
+  }
+
+  private stopStemSrcs(): void {
+    for (const src of this.stemSrcs) {
+      src.onended = null;
+      try {
+        src.stop();
+      } catch {
+        // already stopped
+      }
+      src.disconnect();
+    }
+    this.stemSrcs = [];
+  }
+
   /** Pitch-preserving time-stretch path (rate ≠ 1); node is already created. */
   private startRubberBand(pos: number, rate: number): void {
     const node = this.rbNode!;
@@ -225,9 +400,15 @@ export class Transport {
     // Loop a region by loading only that slice and looping the whole node
     // buffer (the node has no sub-region loop); otherwise load the whole file.
     const loop = this.loop;
-    const key = loop ? `${loop.start}:${loop.end}` : "whole";
+    const stems = this.stemBuffers !== null;
+    const key =
+      (stems ? "stems:" : "") + (loop ? `${loop.start}:${loop.end}` : "whole");
     if (key !== this.rbLoadedKey) {
-      node.setBuffer(loop ? this.sliceChannels(loop) : this.buffer!);
+      if (stems) {
+        node.setBuffer(this.stemChannels(loop));
+      } else {
+        node.setBuffer(loop ? this.sliceChannels(loop) : this.buffer!);
+      }
       this.rbLoadedKey = key;
     }
     node.loop = !!loop;
@@ -277,6 +458,33 @@ export class Transport {
     const out: Float32Array[] = [];
     for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
       out.push(buffer.getChannelData(ch).slice(from, to));
+    }
+    return out;
+  }
+
+  /**
+   * All stem channels as one flat array (stem-major: L, R per stem) for the
+   * Rubber Band node — the whole stems, or a loop's slice cut with the same
+   * rounding as sliceChannels.
+   */
+  private stemChannels(loop: LoopSpan | null): Float32Array[] {
+    const out: Float32Array[] = [];
+    for (const buffer of this.stemBuffers!) {
+      for (let ch = 0; ch < 2; ch++) {
+        // Stems are stereo by construction; fall back to channel 0 if not.
+        const data = buffer.getChannelData(
+          Math.min(ch, buffer.numberOfChannels - 1),
+        );
+        if (loop) {
+          const sr = buffer.sampleRate;
+          const from = clamp(Math.round(loop.start * sr), 0, buffer.length);
+          const len = Math.round((loop.end - loop.start) * sr);
+          const to = Math.min(buffer.length, from + len);
+          out.push(data.slice(from, to));
+        } else {
+          out.push(data);
+        }
+      }
     }
     return out;
   }
@@ -348,6 +556,26 @@ export class Transport {
     this.audioGain.gain.value = this.audioMuted ? 0 : this.audioVolume;
   }
 
+  /** Per-stem volume (0..1), independent of mute. Composed onto audioGain. */
+  setStemVolume(index: number, volume: number): void {
+    this.stemVolumes[index] = volume;
+    this.applyStemGain(index);
+  }
+
+  setStemMuted(index: number, muted: boolean): void {
+    this.stemMutes[index] = muted;
+    this.applyStemGain(index);
+  }
+
+  private stemGainValue(index: number): number {
+    return this.stemMutes[index] ? 0 : (this.stemVolumes[index] ?? 1);
+  }
+
+  private applyStemGain(index: number): void {
+    const gain = this.stemGains[index];
+    if (gain) gain.gain.value = this.stemGainValue(index);
+  }
+
   /** Synth (sampler) playback volume (0..1), independent of mute. */
   setSynthVolume(volume: number): void {
     this.synthVolume = volume;
@@ -411,6 +639,7 @@ export class Transport {
       this.src.disconnect();
       this.src = null;
     }
+    this.stopStemSrcs();
     if (this.rbNode && this.activeIsRb) {
       this.rbNode.onposition = null;
       this.rbNode.onended = null;

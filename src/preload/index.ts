@@ -7,6 +7,10 @@ const nota: NotaBridge = {
     ipcRenderer.invoke(IPC.readAudioFile, absolutePath),
   readProjectAudio: (projectPath, fileName) =>
     ipcRenderer.invoke(IPC.readProjectAudio, projectPath, fileName),
+  saveProjectStems: (projectPath, files) =>
+    ipcRenderer.invoke(IPC.saveProjectStems, projectPath, files),
+  readProjectStems: (projectPath, fileNames) =>
+    ipcRenderer.invoke(IPC.readProjectStems, projectPath, fileNames),
   openProject: () => ipcRenderer.invoke(IPC.openProject),
   readProjectFile: (projectPath) =>
     ipcRenderer.invoke(IPC.readProjectFile, projectPath),

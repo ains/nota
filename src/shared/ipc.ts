@@ -22,10 +22,20 @@ export interface SaveProjectAsResult {
   audioPath: string;
 }
 
+/** One stem audio file to write into (or read from) a project bundle. */
+export interface StemFile {
+  /** File name inside the bundle's stems folder (e.g. "drums.wav"). */
+  fileName: string;
+  /** Raw WAV bytes (transferred as ArrayBuffer). */
+  bytes: ArrayBuffer;
+}
+
 export const IPC = {
   openAudioFile: "dialog:openAudioFile",
   readAudioFile: "fs:readAudioFile",
   readProjectAudio: "fs:readProjectAudio",
+  saveProjectStems: "fs:saveProjectStems",
+  readProjectStems: "fs:readProjectStems",
   openProject: "dialog:openProject",
   readProjectFile: "fs:readProjectFile",
   saveProject: "fs:saveProject",
@@ -48,6 +58,16 @@ export interface NotaBridge {
     projectPath: string,
     fileName: string,
   ): Promise<OpenAudioResult | null>;
+  /** Write stem audio files into a project bundle's stems folder. */
+  saveProjectStems(projectPath: string, files: StemFile[]): Promise<void>;
+  /**
+   * Read stem audio files from a project bundle's stems folder; null if any
+   * file is missing or unreadable (stems are all-or-nothing).
+   */
+  readProjectStems(
+    projectPath: string,
+    fileNames: string[],
+  ): Promise<StemFile[] | null>;
   /** Open dialog for a project bundle; returns null if cancelled/invalid. */
   openProject(): Promise<OpenProjectResult | null>;
   /** Read a project bundle's state file at a known path; null if unreadable. */

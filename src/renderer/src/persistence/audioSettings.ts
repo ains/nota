@@ -1,8 +1,10 @@
 /**
- * Audio control settings — the music/synth volumes and mutes shown in the
+ * Audio control settings — the music/synth/stem volumes and mutes shown in the
  * "Audio controls" drawer. Persisted in localStorage (app-level, independent of
  * any project file) so the mix carries across app restarts.
  */
+import { STEM_NAMES, type StemName } from "@shared/types/project";
+
 export interface AudioSettings {
   /** Music (audio file) playback volume, 0..1 */
   musicVolume: number;
@@ -10,6 +12,16 @@ export interface AudioSettings {
   synthVolume: number;
   audioMuted: boolean;
   synthMuted: boolean;
+  /** Per-stem playback volumes, 0..1 (used once stems are separated) */
+  stemVolumes: Record<StemName, number>;
+  stemMutes: Record<StemName, boolean>;
+}
+
+function perStem<T>(value: T): Record<StemName, T> {
+  return Object.fromEntries(STEM_NAMES.map((s) => [s, value])) as Record<
+    StemName,
+    T
+  >;
 }
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
@@ -17,6 +29,8 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   synthVolume: 1,
   audioMuted: false,
   synthMuted: false,
+  stemVolumes: perStem(1),
+  stemMutes: perStem(false),
 };
 
 const KEY = "nota.audioSettings.v1";
@@ -40,11 +54,19 @@ export function loadAudioSettings(): AudioSettings {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULT_AUDIO_SETTINGS };
     const p = JSON.parse(raw) as Partial<AudioSettings>;
+    const stemVolumes = perStem(1);
+    const stemMutes = perStem(false);
+    for (const stem of STEM_NAMES) {
+      stemVolumes[stem] = volume(p.stemVolumes?.[stem], 1);
+      stemMutes[stem] = bool(p.stemMutes?.[stem], false);
+    }
     return {
       musicVolume: volume(p.musicVolume, DEFAULT_AUDIO_SETTINGS.musicVolume),
       synthVolume: volume(p.synthVolume, DEFAULT_AUDIO_SETTINGS.synthVolume),
       audioMuted: bool(p.audioMuted, DEFAULT_AUDIO_SETTINGS.audioMuted),
       synthMuted: bool(p.synthMuted, DEFAULT_AUDIO_SETTINGS.synthMuted),
+      stemVolumes,
+      stemMutes,
     };
   } catch {
     return { ...DEFAULT_AUDIO_SETTINGS };

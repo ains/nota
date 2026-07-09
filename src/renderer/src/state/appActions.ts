@@ -16,6 +16,18 @@ import {
   removeRecentProject,
 } from "../persistence/recentProjects";
 import { saveAudioSettings } from "../persistence/audioSettings";
+import {
+  startStemSeparation,
+  StemSeparationCancelled,
+  STEM_MODEL_ID,
+  type StemSeparationJob,
+} from "../core/stems/stemSeparator";
+import { encodeWavPcm16 } from "../core/stems/wav";
+import {
+  STEM_NAMES,
+  type StemName,
+  type StoredStems,
+} from "@shared/types/project";
 import { useProjectStore, clearHistory } from "./projectStore";
 import { useSessionStore } from "./sessionStore";
 
@@ -42,6 +54,10 @@ export function initEngineBindings(): void {
   engine.transport.setMusicVolume(session.musicVolume);
   engine.transport.setSynthVolume(session.synthVolume);
   engine.transport.setRate(session.playbackRate);
+  STEM_NAMES.forEach((stem, i) => {
+    engine.transport.setStemVolume(i, session.stemVolumes[stem]);
+    engine.transport.setStemMuted(i, session.stemMutes[stem]);
+  });
 
   // Persist the audio-control mix whenever it changes so it carries across
   // restarts. Writes on each change (including rapid slider drags), but the
@@ -51,13 +67,17 @@ export function initEngineBindings(): void {
       s.musicVolume !== prev.musicVolume ||
       s.synthVolume !== prev.synthVolume ||
       s.audioMuted !== prev.audioMuted ||
-      s.synthMuted !== prev.synthMuted
+      s.synthMuted !== prev.synthMuted ||
+      s.stemVolumes !== prev.stemVolumes ||
+      s.stemMutes !== prev.stemMutes
     ) {
       saveAudioSettings({
         musicVolume: s.musicVolume,
         synthVolume: s.synthVolume,
         audioMuted: s.audioMuted,
         synthMuted: s.synthMuted,
+        stemVolumes: s.stemVolumes,
+        stemMutes: s.stemMutes,
       });
     }
   });
@@ -142,6 +162,10 @@ async function loadAudioIntoApp(
   const session = useSessionStore.getState();
   session.setAudioLoading(true);
   session.setPeaks(null);
+  // New audio invalidates any stems that are loaded or being separated.
+  cancelStemSeparation();
+  session.setStemsReady(false);
+  session.setStemJob({ phase: "idle" });
   try {
     const buffer = await engine.transport.loadAudio(file.bytes);
     const audioRef = {
@@ -213,11 +237,13 @@ async function loadProjectFromFile(path: string, json: string): Promise<void> {
     audio: { ...data.audio, absolutePath: audioFile.absolutePath },
     notes: data.notes,
     loopRegions: data.loopRegions,
+    stems: data.stems ?? null,
     projectPath: path,
   });
   clearHistory();
   useSessionStore.getState().setActiveLoopId(null);
   await loadAudioIntoApp(audioFile, false);
+  if (data.stems) await loadStemsFromBundle(path, data.stems);
   // loadAudioIntoApp(asNewProject=false) already set the audio ref and a
   // fit-to-window viewport; restore the saved view over it.
   if (data.view) {
@@ -263,6 +289,7 @@ export async function saveProject(saveAs = false): Promise<void> {
       scrollSec: viewport.scrollSec,
       playheadSec: engine.transport.position,
     },
+    stems: p.stems ?? undefined,
   });
   if (p.projectPath && !saveAs) {
     await window.nota.saveProject(p.projectPath, json);
@@ -281,6 +308,9 @@ export async function saveProject(saveAs = false): Promise<void> {
     if (result) {
       p.markSaved(result.projectPath, result.audioPath);
       recordRecent(result.projectPath, p.audio.fileName);
+      // saveProjectAs only copies the audio; write the stems (still loaded in
+      // the transport) into the new bundle too.
+      if (p.stems) await writeLoadedStemsToBundle(result.projectPath, p.stems);
     }
   }
 }
@@ -299,6 +329,154 @@ export async function exportMidi(): Promise<void> {
     ? p.audio.fileName.replace(/\.[^.]+$/, "")
     : "transcription";
   await window.nota.exportMidiFile(notesToMidiBytes(p.notes), suggested);
+}
+
+// --- stem separation ---
+
+/** The in-flight separation job; null when none is running. */
+let activeStemJob: StemSeparationJob | null = null;
+
+function stemWavFiles(
+  stems: StoredStems,
+  buffers: AudioBuffer[],
+): { fileName: string; bytes: ArrayBuffer }[] {
+  return STEM_NAMES.map((name, i) => ({
+    fileName: stems.fileNames[name],
+    bytes: encodeWavPcm16(
+      [buffers[i].getChannelData(0), buffers[i].getChannelData(1)],
+      buffers[i].sampleRate,
+    ),
+  }));
+}
+
+/** Re-encode the loaded stems into another bundle (used by save-as). */
+async function writeLoadedStemsToBundle(
+  projectPath: string,
+  stems: StoredStems,
+): Promise<void> {
+  const buffers = engine.transport.getStemBuffers();
+  if (!buffers) return;
+  await window.nota.saveProjectStems(projectPath, stemWavFiles(stems, buffers));
+}
+
+/** Read a project's stem files, decode them, and hand them to the transport. */
+async function loadStemsFromBundle(
+  projectPath: string,
+  stems: StoredStems,
+): Promise<void> {
+  const files = await window.nota.readProjectStems(
+    projectPath,
+    STEM_NAMES.map((name) => stems.fileNames[name]),
+  );
+  if (!files) {
+    console.error("Project bundle is missing its stem files; ignoring stems.");
+    return;
+  }
+  const buffers = await Promise.all(
+    files.map((f) => engine.transport.ctx.decodeAudioData(f.bytes)),
+  );
+  // Bail if another project/audio was loaded while we were decoding.
+  if (useProjectStore.getState().projectPath !== projectPath) return;
+  await engine.transport.setStems(buffers);
+  useSessionStore.getState().setStemsReady(true);
+}
+
+/**
+ * Separate the project audio into the four Demucs stems, store them in the
+ * project bundle, and switch playback over to them. Requires a saved project
+ * (the stems live in the bundle). Progress is reported via session.stemJob.
+ */
+export async function separateStems(): Promise<void> {
+  const session = useSessionStore.getState();
+  const p = useProjectStore.getState();
+  const buffer = engine.transport.audioBuffer;
+  if (!buffer || !p.projectPath || !p.audio || activeStemJob) return;
+  const projectPath = p.projectPath;
+  const sourceSha256 = p.audio.sha256;
+
+  void window.nota.setPowerSaveBlocker(true);
+  session.setStemJob({ phase: "downloading", progress: null });
+  try {
+    const job = startStemSeparation(buffer, (prog) => {
+      useSessionStore
+        .getState()
+        .setStemJob(
+          prog.phase === "download"
+            ? { phase: "downloading", progress: prog.progress }
+            : { phase: "separating", progress: prog.progress },
+        );
+    });
+    activeStemJob = job;
+    const separated = await job.promise;
+
+    useSessionStore.getState().setStemJob({ phase: "saving" });
+    // Fix the order to STEM_NAMES regardless of what the model reported.
+    const ordered = STEM_NAMES.map(
+      (name) => separated.find((s) => s.name === name)!,
+    );
+    const sampleRate = buffer.sampleRate;
+    const buffers = ordered.map((s) => {
+      const b = engine.transport.ctx.createBuffer(2, s.left.length, sampleRate);
+      b.copyToChannel(s.left, 0);
+      b.copyToChannel(s.right, 1);
+      return b;
+    });
+    const stored: StoredStems = {
+      modelId: STEM_MODEL_ID,
+      sourceSha256,
+      fileNames: Object.fromEntries(
+        STEM_NAMES.map((name) => [name, `${name}.wav`]),
+      ) as StoredStems["fileNames"],
+    };
+    await window.nota.saveProjectStems(
+      projectPath,
+      stemWavFiles(stored, buffers),
+    );
+
+    // Bail before touching live state if the project changed mid-separation
+    // (the stems were still written to their own bundle).
+    const current = useProjectStore.getState();
+    if (
+      current.projectPath !== projectPath ||
+      engine.transport.audioBuffer !== buffer
+    ) {
+      useSessionStore.getState().setStemJob({ phase: "idle" });
+      return;
+    }
+    current.setStems(stored);
+    await saveProject();
+    await engine.transport.setStems(buffers);
+    useSessionStore.getState().setStemsReady(true);
+    useSessionStore.getState().setStemJob({ phase: "idle" });
+  } catch (err) {
+    if (err instanceof StemSeparationCancelled) {
+      useSessionStore.getState().setStemJob({ phase: "idle" });
+    } else {
+      console.error("Stem separation failed:", err);
+      useSessionStore.getState().setStemJob({
+        phase: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  } finally {
+    activeStemJob = null;
+    void window.nota.setPowerSaveBlocker(false);
+  }
+}
+
+/** Cancel an in-flight separation (no-op when none is running). */
+export function cancelStemSeparation(): void {
+  activeStemJob?.cancel();
+}
+
+export function setStemVolume(stem: StemName, volume: number): void {
+  engine.transport.setStemVolume(STEM_NAMES.indexOf(stem), volume);
+  useSessionStore.getState().setStemVolume(stem, volume);
+}
+
+export function setStemMuted(stem: StemName, muted: boolean): void {
+  engine.transport.setStemMuted(STEM_NAMES.indexOf(stem), muted);
+  useSessionStore.getState().setStemMuted(stem, muted);
 }
 
 // --- transport ---
