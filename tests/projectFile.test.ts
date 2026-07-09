@@ -8,7 +8,6 @@ import {
 const sample = {
   audio: {
     fileName: "song.mp3",
-    absolutePath: "/music/song.mp3",
     sha256: "abc123",
     durationSec: 215.3289473,
   },
@@ -24,6 +23,15 @@ describe("project file round-trip", () => {
     const back = deserializeProject(json);
     expect(back).toEqual(sample);
     expect(back.notes[0].onsetSec).toBe(1.2345678);
+  });
+
+  it("never persists a runtime audio path", () => {
+    // The audio lives inside the bundle, so a stray absolutePath on the
+    // runtime ref must not leak into the saved state file.
+    const audio = { ...sample.audio, absolutePath: "/private/source.mp3" };
+    const json = serializeProject({ ...sample, audio });
+    expect(json).not.toContain("absolutePath");
+    expect(json).not.toContain("/private/source.mp3");
   });
 
   it("rejects newer versions", () => {

@@ -9,41 +9,63 @@ export interface OpenAudioResult {
 }
 
 export interface OpenProjectResult {
+  /** Absolute path of the project bundle directory. */
   path: string;
+  /** Contents of the bundle's state file. */
   json: string;
+}
+
+export interface SaveProjectAsResult {
+  /** Absolute path of the newly created project bundle directory. */
+  projectPath: string;
+  /** Absolute path of the audio copy inside the bundle. */
+  audioPath: string;
 }
 
 export const IPC = {
   openAudioFile: "dialog:openAudioFile",
   readAudioFile: "fs:readAudioFile",
+  readProjectAudio: "fs:readProjectAudio",
   openProject: "dialog:openProject",
   readProjectFile: "fs:readProjectFile",
   saveProject: "fs:saveProject",
   saveProjectAs: "dialog:saveProjectAs",
-  relinkAudio: "dialog:relinkAudio",
   importMidiFile: "dialog:importMidiFile",
   exportMidiFile: "dialog:exportMidiFile",
   setPowerSaveBlocker: "power:setBlocker",
   whenWindowShown: "window:whenShown",
+  consumeOpenPath: "app:consumeOpenPath",
+  projectOpened: "project:opened",
 } as const;
 
 export interface NotaBridge {
   /** Open file dialog for an audio file; returns null if cancelled. */
   openAudioFile(): Promise<OpenAudioResult | null>;
-  /** Read a known audio path (project re-open); null if missing/unreadable. */
+  /** Read a known audio path (new project from drop); null if unreadable. */
   readAudioFile(absolutePath: string): Promise<OpenAudioResult | null>;
-  /** Open file dialog for a .nota project; returns null if cancelled. */
+  /** Read the audio copy bundled inside a project; null if missing. */
+  readProjectAudio(
+    projectPath: string,
+    fileName: string,
+  ): Promise<OpenAudioResult | null>;
+  /** Open dialog for a project bundle; returns null if cancelled/invalid. */
   openProject(): Promise<OpenProjectResult | null>;
-  /** Read a .nota project at a known path; null if missing/unreadable. */
-  readProjectFile(path: string): Promise<string | null>;
+  /** Read a project bundle's state file at a known path; null if unreadable. */
+  readProjectFile(projectPath: string): Promise<string | null>;
   /** Resolve the absolute path of a dropped/selected File (Electron webUtils). */
   getPathForFile(file: File): string;
-  /** Write project JSON to a known path. */
-  saveProject(path: string, json: string): Promise<void>;
-  /** Save-as dialog; returns chosen path or null if cancelled. */
-  saveProjectAs(json: string, suggestedName: string): Promise<string | null>;
-  /** Relink dialog when the project's audio file is missing. */
-  relinkAudio(expectedFileName: string): Promise<OpenAudioResult | null>;
+  /** Write the state file into an existing project bundle. */
+  saveProject(projectPath: string, json: string): Promise<void>;
+  /**
+   * Save-as dialog: create a new project bundle, copy the source audio into
+   * it, and write the state file. Returns the new paths, or null if cancelled.
+   */
+  saveProjectAs(
+    json: string,
+    suggestedName: string,
+    sourceAudioPath: string,
+    audioFileName: string,
+  ): Promise<SaveProjectAsResult | null>;
   /** Open dialog for a .mid file; returns raw bytes or null if cancelled. */
   importMidiFile(): Promise<ArrayBuffer | null>;
   /** Save dialog for a .mid file; returns chosen path or null if cancelled. */
@@ -59,4 +81,12 @@ export interface NotaBridge {
    * this so the request cannot race Chromium's MIDI bring-up at app launch.
    */
   whenWindowShown(): Promise<void>;
+  /**
+   * Drain any project paths queued from a macOS Finder open before the window
+   * was ready (cold launch). Also marks the renderer ready so later opens are
+   * pushed live via {@link onOpenProject}.
+   */
+  consumeOpenPath(): Promise<string[]>;
+  /** Subscribe to project bundles opened from Finder while running. Returns an unsubscribe fn. */
+  onOpenProject(callback: (projectPath: string) => void): () => void;
 }

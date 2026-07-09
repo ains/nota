@@ -1,9 +1,13 @@
 import { ipcMain, dialog, powerSaveBlocker, BrowserWindow } from "electron";
-import { readFile, writeFile } from "fs/promises";
+import { readFile, writeFile, mkdir, copyFile } from "fs/promises";
 import { createHash } from "crypto";
-import { basename } from "path";
-import { IPC, type OpenAudioResult } from "../shared/ipc";
-import { PROJECT_FILE_EXT } from "../shared/types/project";
+import { basename, join, extname } from "path";
+import {
+  IPC,
+  type OpenAudioResult,
+  type SaveProjectAsResult,
+} from "../shared/ipc";
+import { PROJECT_FILE_EXT, PROJECT_STATE_FILE } from "../shared/types/project";
 
 const AUDIO_FILTERS = [
   {
@@ -24,6 +28,15 @@ async function loadAudio(absolutePath: string): Promise<OpenAudioResult> {
     buf.byteOffset + buf.byteLength,
   );
   return { absolutePath, fileName: basename(absolutePath), bytes, sha256 };
+}
+
+/** Read a project bundle's state file; null if the path is not a Nota project. */
+async function readProjectState(projectDir: string): Promise<string | null> {
+  try {
+    return await readFile(join(projectDir, PROJECT_STATE_FILE), "utf-8");
+  } catch {
+    return null;
+  }
 }
 
 export function registerIpcHandlers(): void {
@@ -52,25 +65,14 @@ export function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(
-    IPC.openProject,
-    async (): Promise<{ path: string; json: string } | null> => {
-      const result = await dialog.showOpenDialog({
-        title: "Open Project",
-        properties: ["openFile"],
-        filters: PROJECT_FILTERS,
-      });
-      if (result.canceled || result.filePaths.length === 0) return null;
-      const path = result.filePaths[0];
-      const json = await readFile(path, "utf-8");
-      return { path, json };
-    },
-  );
-
-  ipcMain.handle(
-    IPC.readProjectFile,
-    async (_e, path: string): Promise<string | null> => {
+    IPC.readProjectAudio,
+    async (
+      _e,
+      projectPath: string,
+      fileName: string,
+    ): Promise<OpenAudioResult | null> => {
       try {
-        return await readFile(path, "utf-8");
+        return await loadAudio(join(projectPath, fileName));
       } catch {
         return null;
       }
@@ -78,36 +80,77 @@ export function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(
+    IPC.openProject,
+    async (): Promise<{ path: string; json: string } | null> => {
+      // On macOS a registered .nota package is selectable as a file; in dev
+      // (and on Windows/Linux) the bundle is an ordinary folder, so allow
+      // directory selection too.
+      const properties: Array<"openFile" | "openDirectory"> =
+        process.platform === "darwin"
+          ? ["openFile", "openDirectory"]
+          : ["openDirectory"];
+      const result = await dialog.showOpenDialog({
+        title: "Open Project",
+        properties,
+        filters: PROJECT_FILTERS,
+      });
+      if (result.canceled || result.filePaths.length === 0) return null;
+      const path = result.filePaths[0];
+      const json = await readProjectState(path);
+      if (json === null) {
+        dialog.showErrorBox(
+          "Not a Nota project",
+          `"${basename(path)}" is not a Nota project.`,
+        );
+        return null;
+      }
+      return { path, json };
+    },
+  );
+
+  ipcMain.handle(
+    IPC.readProjectFile,
+    async (_e, projectPath: string): Promise<string | null> =>
+      readProjectState(projectPath),
+  );
+
+  ipcMain.handle(
     IPC.saveProject,
-    async (_e, path: string, json: string): Promise<void> => {
-      await writeFile(path, json, "utf-8");
+    async (_e, projectPath: string, json: string): Promise<void> => {
+      await writeFile(join(projectPath, PROJECT_STATE_FILE), json, "utf-8");
     },
   );
 
   ipcMain.handle(
     IPC.saveProjectAs,
-    async (_e, json: string, suggestedName: string): Promise<string | null> => {
+    async (
+      _e,
+      json: string,
+      suggestedName: string,
+      sourceAudioPath: string,
+      audioFileName: string,
+    ): Promise<SaveProjectAsResult | null> => {
       const result = await dialog.showSaveDialog({
         title: "Save Project",
         defaultPath: `${suggestedName}.${PROJECT_FILE_EXT}`,
         filters: PROJECT_FILTERS,
       });
       if (result.canceled || !result.filePath) return null;
-      await writeFile(result.filePath, json, "utf-8");
-      return result.filePath;
-    },
-  );
-
-  ipcMain.handle(
-    IPC.relinkAudio,
-    async (_e, expectedFileName: string): Promise<OpenAudioResult | null> => {
-      const result = await dialog.showOpenDialog({
-        title: `Locate "${expectedFileName}"`,
-        properties: ["openFile"],
-        filters: AUDIO_FILTERS,
-      });
-      if (result.canceled || result.filePaths.length === 0) return null;
-      return loadAudio(result.filePaths[0]);
+      // Guarantee the bundle carries the .nota extension even if the user
+      // typed a name without it.
+      const projectPath =
+        extname(result.filePath).toLowerCase() === `.${PROJECT_FILE_EXT}`
+          ? result.filePath
+          : `${result.filePath}.${PROJECT_FILE_EXT}`;
+      await mkdir(projectPath, { recursive: true });
+      const audioPath = join(projectPath, audioFileName);
+      // Copy the source audio into the bundle (skipped when saving a bundle
+      // back onto itself, where source and destination are the same file).
+      if (sourceAudioPath !== audioPath) {
+        await copyFile(sourceAudioPath, audioPath);
+      }
+      await writeFile(join(projectPath, PROJECT_STATE_FILE), json, "utf-8");
+      return { projectPath, audioPath };
     },
   );
 

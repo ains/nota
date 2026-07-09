@@ -1,12 +1,12 @@
 /**
  * Library of previously opened projects, persisted in localStorage. Each entry
- * points at a saved .nota file on disk; the library screen lists them and
- * re-opens them by path.
+ * points at a saved .nota project bundle on disk; the library screen lists them
+ * and re-opens them by path.
  */
 export interface RecentProject {
-  /** Absolute path to the .nota project file */
+  /** Absolute path to the .nota project bundle directory */
   path: string;
-  /** Display name (file basename without extension) */
+  /** Display name (bundle basename without extension) */
   name: string;
   /** Source audio file name, shown as a subtitle */
   audioFileName: string;

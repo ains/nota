@@ -1,10 +1,23 @@
 /** All times are absolute seconds from audio start (float64). No ticks, no tempo map. */
 
-export interface AudioRef {
+/**
+ * Audio metadata persisted inside the project bundle. The audio bytes live
+ * beside it in the bundle as `<fileName>`, so the location is implicit and no
+ * path is stored.
+ */
+export interface StoredAudio {
   fileName: string;
-  absolutePath: string;
   sha256: string;
   durationSec: number;
+}
+
+/**
+ * Runtime audio reference: the persisted metadata plus the resolved on-disk
+ * path of the audio — the bundled copy for a saved project, or the original
+ * source file for one that has not been saved yet.
+ */
+export interface AudioRef extends StoredAudio {
+  absolutePath: string;
 }
 
 export interface Note {
@@ -36,7 +49,7 @@ export interface ProjectView {
 
 export interface Project {
   version: 1;
-  audio: AudioRef;
+  audio: StoredAudio;
   notes: Note[];
   loopRegions: LoopRegion[];
   /** Optional — older files predate saved view state. */
@@ -44,4 +57,11 @@ export interface Project {
 }
 
 export const PROJECT_VERSION = 1 as const;
+/**
+ * Extension of the project bundle directory (e.g. `Yesterday.nota`). On macOS
+ * this is registered as a document package so Finder shows it as a single
+ * file; on Windows/Linux it is an ordinary folder.
+ */
 export const PROJECT_FILE_EXT = "nota";
+/** Name of the state file stored inside the project bundle. */
+export const PROJECT_STATE_FILE = "project.json";
