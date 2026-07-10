@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import type { JSX } from "react";
 import type { Note } from "@shared/types/project";
 import { TransportBar } from "./components/transport/TransportBar";
@@ -26,7 +26,7 @@ import {
 } from "./state/appActions";
 import { useProjectStore, undo, redo } from "./state/projectStore";
 import { useSessionStore } from "./state/sessionStore";
-import { formatTime } from "./core/timeline/viewport";
+import { fitDuration, formatTime } from "./core/timeline/viewport";
 
 export const GUTTER_W = 56;
 
@@ -118,6 +118,7 @@ function RollToggleBar(): JSX.Element {
 
 function App(): JSX.Element {
   const lanesRef = useRef<HTMLDivElement | null>(null);
+  const initiallyFittedAudioRef = useRef<string | null>(null);
   const view = useSessionStore((s) => s.view);
   const showPianoRoll = useSessionStore((s) => s.showPianoRoll);
   const showVolumeDrawer = useSessionStore((s) => s.showVolumeDrawer);
@@ -146,18 +147,41 @@ function App(): JSX.Element {
     document.title = name ? `Nota — ${name}` : "Nota";
   }, [projectPath]);
 
-  // Track lane width for viewport clamping.
-  useEffect(() => {
+  // Track lane width for viewport clamping. The editor lanes do not exist on
+  // the library screen, so install the observer whenever the editor mounts.
+  // A new unsaved project also gets one exact fit using the measured width;
+  // the audio loader only has the previous/default width during a library drop.
+  useLayoutEffect(() => {
+    if (view === "library") {
+      initiallyFittedAudioRef.current = null;
+      return;
+    }
     const el = lanesRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
-      useSessionStore
-        .getState()
-        .setLaneWidth(el.getBoundingClientRect().width - GUTTER_W);
-    });
+    const measure = (): void => {
+      const width = Math.max(
+        1,
+        el.getBoundingClientRect().width - (showPianoRoll ? GUTTER_W : 0),
+      );
+      useSessionStore.getState().setLaneWidth(width);
+
+      const project = useProjectStore.getState();
+      if (
+        project.audio &&
+        project.projectPath === null &&
+        initiallyFittedAudioRef.current !== project.audio.absolutePath
+      ) {
+        useSessionStore
+          .getState()
+          .setViewport(fitDuration(project.audio.durationSec, width));
+        initiallyFittedAudioRef.current = project.audio.absolutePath;
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [view, showPianoRoll]);
 
   // Global keyboard shortcuts.
   useEffect(() => {

@@ -3,6 +3,7 @@ import {
   secToPx,
   pxToSec,
   zoomAt,
+  fitDuration,
   rulerTickSec,
   formatTime,
   type Viewport,
@@ -27,6 +28,18 @@ describe("viewport math", () => {
   it("zoomAt clamps zoom level", () => {
     const z = zoomAt(vp, 0, 1e9);
     expect(z.pxPerSecond).toBeLessThanOrEqual(20000);
+  });
+
+  it("fits the entire duration from time zero", () => {
+    const fitted = fitDuration(400, 800);
+    expect(fitted).toEqual({ pxPerSecond: 2, scrollSec: 0 });
+    expect(secToPx(fitted, 400)).toBe(800);
+  });
+
+  it("fits long durations below the interactive zoom floor", () => {
+    const fitted = fitDuration(3600, 900);
+    expect(fitted.pxPerSecond).toBe(0.25);
+    expect(secToPx(fitted, 3600)).toBe(900);
   });
 });
 

@@ -5,7 +5,7 @@
  */
 import { getEngine } from "../core/engine/Engine";
 import { buildPeaksAsync } from "../core/audio/buildPeaks";
-import { zoomAt, clampScroll } from "../core/timeline/viewport";
+import { zoomAt, clampScroll, fitDuration } from "../core/timeline/viewport";
 import {
   serializeProject,
   deserializeProject,
@@ -160,10 +160,9 @@ async function loadAudioIntoApp(
     }
     // Fit the whole file in view.
     const widthPx = useSessionStore.getState().laneWidthPx;
-    useSessionStore.getState().setViewport({
-      pxPerSecond: Math.max(2, widthPx / Math.max(buffer.duration, 1)),
-      scrollSec: 0,
-    });
+    useSessionStore
+      .getState()
+      .setViewport(fitDuration(buffer.duration, widthPx));
     const peaks = await buildPeaksAsync(buffer);
     useSessionStore.getState().setPeaks(peaks);
   } finally {

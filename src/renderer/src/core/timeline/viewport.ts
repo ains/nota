@@ -25,6 +25,18 @@ export function visibleSpanSec(vp: Viewport, widthPx: number): number {
   return widthPx / vp.pxPerSecond;
 }
 
+/** Fit an entire duration into the viewport with time zero at the left edge. */
+export function fitDuration(durationSec: number, widthPx: number): Viewport {
+  const safeDuration = Math.max(durationSec, Number.EPSILON);
+  const safeWidth = Math.max(widthPx, Number.EPSILON);
+  return {
+    // A fit may be wider than the interactive zoom range for very long files.
+    // Do not apply MIN_PX_PER_SEC here: fitting the complete file takes priority.
+    pxPerSecond: Math.min(safeWidth / safeDuration, MAX_PX_PER_SEC),
+    scrollSec: 0,
+  };
+}
+
 /** Zoom by `factor` keeping the time under `anchorPx` fixed on screen. */
 export function zoomAt(
   vp: Viewport,
