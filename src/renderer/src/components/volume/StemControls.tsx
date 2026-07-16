@@ -12,6 +12,7 @@ import {
   stemSeparationSupported,
   STEM_MODEL_SIZE_MB,
 } from "../../core/stems/stemSeparator";
+import { StemJobState } from "../../state/stemJobState";
 import { VolumeRow } from "./VolumeRow";
 
 const STEM_LABELS: Record<StemName, string> = {
@@ -21,14 +22,16 @@ const STEM_LABELS: Record<StemName, string> = {
   vocals: "Vocals",
 };
 
-function jobLabel(phase: "downloading" | "separating" | "saving"): string {
-  switch (phase) {
+function jobLabel(job: StemJobState): string {
+  switch (job.phase) {
     case "downloading":
       return `Downloading model (${STEM_MODEL_SIZE_MB} MB)`;
     case "separating":
       return "Separating stems";
     case "saving":
       return "Saving stems";
+    default:
+      return "";
   }
 }
 
@@ -38,7 +41,7 @@ function jobLabel(phase: "downloading" | "separating" | "saving"): string {
  */
 export function StemControls(): JSX.Element {
   const stemsReady = useSessionStore((s) => s.stemsReady);
-  const stemJob = useSessionStore((s) => s.stemJob);
+  const stemJobState = useSessionStore((s) => s.stemJobState);
   const stemVolumes = useSessionStore((s) => s.stemVolumes);
   const stemMutes = useSessionStore((s) => s.stemMutes);
   const audioLoading = useSessionStore((s) => s.audioLoading);
@@ -62,17 +65,13 @@ export function StemControls(): JSX.Element {
     );
   }
 
-  if (
-    stemJob.phase === "downloading" ||
-    stemJob.phase === "separating" ||
-    stemJob.phase === "saving"
-  ) {
-    const progress = stemJob.phase === "saving" ? null : stemJob.progress;
+  if (stemJobState.inProgress()) {
+    const progress = stemJobState.progress;
     return (
       <div className="vd-stems">
         <div className="vd-section">Stems</div>
         <div className="vd-job-label">
-          <span>{jobLabel(stemJob.phase)}…</span>
+          <span>{jobLabel(stemJobState)}…</span>
           {progress !== null && <span>{Math.round(progress * 100)}%</span>}
         </div>
         <progress
@@ -80,7 +79,7 @@ export function StemControls(): JSX.Element {
           max={1}
           value={progress ?? undefined}
         />
-        {stemJob.phase !== "saving" && (
+        {stemJobState.cancellable() && (
           <button className="vd-stem-btn" onClick={cancelStemSeparation}>
             Cancel
           </button>
@@ -94,9 +93,9 @@ export function StemControls(): JSX.Element {
   return (
     <div className="vd-stems">
       <div className="vd-section">Stems</div>
-      {stemJob.phase === "error" && (
-        <div className="vd-error" title={stemJob.message}>
-          Separation failed: {stemJob.message}
+      {stemJobState.hasError() && (
+        <div className="vd-error" title={stemJobState.message}>
+          Separation failed: {stemJobState.message}
         </div>
       )}
       <button
@@ -104,7 +103,7 @@ export function StemControls(): JSX.Element {
         disabled={!canSeparate}
         onClick={() => void separateStems()}
       >
-        {stemJob.phase === "error" ? "Retry separation" : "Separate stems"}
+        {stemJobState.hasError() ? "Retry separation" : "Separate stems"}
       </button>
       {!supported ? (
         <div className="vd-hint">Stem separation requires WebGPU.</div>

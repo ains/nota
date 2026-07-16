@@ -8,6 +8,7 @@
 import { create } from "zustand";
 import type { Note, StemName } from "@shared/types/project";
 import { DEFAULT_PLAYBACK_RATE } from "../constants";
+import { StemJobState } from "./stemJobState";
 import { loadAudioSettings } from "../persistence/audioSettings";
 import type { Viewport } from "../core/timeline/viewport";
 import type { PeakPyramid } from "../core/audio/peaks";
@@ -33,14 +34,6 @@ export interface PendingRegion {
   startSec: number;
   endSec: number;
 }
-
-/** Progress of an in-flight (or failed) stem-separation run. */
-export type StemJob =
-  | { phase: "idle" }
-  | { phase: "downloading"; progress: number | null }
-  | { phase: "separating"; progress: number | null }
-  | { phase: "saving" }
-  | { phase: "error"; message: string };
 
 export interface SessionState {
   view: AppView;
@@ -82,7 +75,7 @@ export interface SessionState {
   /** Whether separated stems are loaded into the transport */
   stemsReady: boolean;
   /** State of the stem-separation pipeline */
-  stemJob: StemJob;
+  stemJobState: StemJobState;
   /** Playback speed multiplier (pitch preserved) */
   playbackRate: number;
   /** Whether the piano roll lane is shown below the waveform */
@@ -112,7 +105,7 @@ export interface SessionState {
   setStemVolume(stem: StemName, v: number): void;
   setStemMuted(stem: StemName, muted: boolean): void;
   setStemsReady(b: boolean): void;
-  setStemJob(job: StemJob): void;
+  setStemJobState(job: StemJobState): void;
   setPlaybackRate(v: number): void;
   setShowPianoRoll(b: boolean): void;
   setShowVolumeDrawer(b: boolean): void;
@@ -147,7 +140,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   stemVolumes: audioSettings.stemVolumes,
   stemMutes: audioSettings.stemMutes,
   stemsReady: false,
-  stemJob: { phase: "idle" },
+  stemJobState: StemJobState.idle(),
   playbackRate: DEFAULT_PLAYBACK_RATE,
   showPianoRoll: false,
   showVolumeDrawer: false,
@@ -178,7 +171,7 @@ export const useSessionStore = create<SessionState>()((set) => ({
   setStemMuted: (stem, muted) =>
     set((s) => ({ stemMutes: { ...s.stemMutes, [stem]: muted } })),
   setStemsReady: (stemsReady) => set({ stemsReady }),
-  setStemJob: (stemJob) => set({ stemJob }),
+  setStemJobState: (stemJobState) => set({ stemJobState }),
   setPlaybackRate: (playbackRate) => set({ playbackRate }),
   setShowPianoRoll: (showPianoRoll) => set({ showPianoRoll }),
   setShowVolumeDrawer: (showVolumeDrawer) => set({ showVolumeDrawer }),

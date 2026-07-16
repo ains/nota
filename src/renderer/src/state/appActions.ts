@@ -28,6 +28,7 @@ import {
   type StemName,
   type StoredStems,
 } from "@shared/types/project";
+import { StemJobState } from "./stemJobState";
 import { useProjectStore, clearHistory } from "./projectStore";
 import { useSessionStore } from "./sessionStore";
 
@@ -165,7 +166,7 @@ async function loadAudioIntoApp(
   // New audio invalidates any stems that are loaded or being separated.
   cancelStemSeparation();
   session.setStemsReady(false);
-  session.setStemJob({ phase: "idle" });
+  session.setStemJobState(StemJobState.idle());
   try {
     const buffer = await engine.transport.loadAudio(file.bytes);
     const audioRef = {
@@ -384,7 +385,7 @@ async function loadStemsFromBundle(
 /**
  * Separate the project audio into the four Demucs stems, store them in the
  * project bundle, and switch playback over to them. Requires a saved project
- * (the stems live in the bundle). Progress is reported via session.stemJob.
+ * (the stems live in the bundle). Progress is reported via session.stemJobState.
  */
 export async function separateStems(): Promise<void> {
   const session = useSessionStore.getState();
@@ -395,21 +396,21 @@ export async function separateStems(): Promise<void> {
   const sourceSha256 = p.audio.sha256;
 
   void window.nota.setPowerSaveBlocker(true);
-  session.setStemJob({ phase: "downloading", progress: null });
+  session.setStemJobState(StemJobState.downloading(null));
   try {
     const job = startStemSeparation(buffer, (prog) => {
       useSessionStore
         .getState()
-        .setStemJob(
+        .setStemJobState(
           prog.phase === "download"
-            ? { phase: "downloading", progress: prog.progress }
-            : { phase: "separating", progress: prog.progress },
+            ? StemJobState.downloading(prog.progress)
+            : StemJobState.separating(prog.progress),
         );
     });
     activeStemJob = job;
     const separated = await job.promise;
 
-    useSessionStore.getState().setStemJob({ phase: "saving" });
+    useSessionStore.getState().setStemJobState(StemJobState.saving());
     // Fix the order to STEM_NAMES regardless of what the model reported.
     const ordered = STEM_NAMES.map(
       (name) => separated.find((s) => s.name === name)!,
@@ -440,23 +441,24 @@ export async function separateStems(): Promise<void> {
       current.projectPath !== projectPath ||
       engine.transport.audioBuffer !== buffer
     ) {
-      useSessionStore.getState().setStemJob({ phase: "idle" });
+      useSessionStore.getState().setStemJobState(StemJobState.idle());
       return;
     }
     current.setStems(stored);
     await saveProject();
     await engine.transport.setStems(buffers);
     useSessionStore.getState().setStemsReady(true);
-    useSessionStore.getState().setStemJob({ phase: "idle" });
+    useSessionStore.getState().setStemJobState(StemJobState.idle());
   } catch (err) {
     if (err instanceof StemSeparationCancelled) {
-      useSessionStore.getState().setStemJob({ phase: "idle" });
+      useSessionStore.getState().setStemJobState(StemJobState.idle());
     } else {
       console.error("Stem separation failed:", err);
-      useSessionStore.getState().setStemJob({
-        phase: "error",
-        message: err instanceof Error ? err.message : String(err),
-      });
+      useSessionStore
+        .getState()
+        .setStemJobState(
+          StemJobState.error(err instanceof Error ? err.message : String(err)),
+        );
     }
   } finally {
     activeStemJob = null;
