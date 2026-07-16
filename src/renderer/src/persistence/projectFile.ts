@@ -1,7 +1,9 @@
 /** (De)serialization of the project state file with version migration. */
 import {
   PROJECT_VERSION,
+  STEM_NAMES,
   type StoredAudio,
+  type StoredStems,
   type LoopRegion,
   type Note,
   type Project,
@@ -14,6 +16,8 @@ export interface ProjectData {
   loopRegions: LoopRegion[];
   /** Absent for files saved before view state existed. */
   view?: ProjectView;
+  /** Absent until stem separation has been run. */
+  stems?: StoredStems;
 }
 
 export function serializeProject(data: ProjectData): string {
@@ -29,6 +33,7 @@ export function serializeProject(data: ProjectData): string {
     notes: data.notes,
     loopRegions: data.loopRegions,
     view: data.view,
+    stems: data.stems,
   };
   return JSON.stringify(project, null, 2);
 }
@@ -48,6 +53,27 @@ function parseView(raw: unknown): ProjectView | undefined {
     };
   }
   return undefined;
+}
+
+/**
+ * Validate a persisted stems record; anything malformed degrades to undefined
+ * (the project opens without stems and separation can simply be run again).
+ */
+function parseStems(raw: unknown): StoredStems | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const s = raw as Record<string, unknown>;
+  if (typeof s.modelId !== "string" || typeof s.sourceSha256 !== "string") {
+    return undefined;
+  }
+  const names = s.fileNames;
+  if (typeof names !== "object" || names === null) return undefined;
+  const fileNames = {} as StoredStems["fileNames"];
+  for (const stem of STEM_NAMES) {
+    const fileName = (names as Record<string, unknown>)[stem];
+    if (typeof fileName !== "string") return undefined;
+    fileNames[stem] = fileName;
+  }
+  return { modelId: s.modelId, sourceSha256: s.sourceSha256, fileNames };
 }
 
 export class ProjectParseError extends Error {}
@@ -90,5 +116,6 @@ export function deserializeProject(json: string): ProjectData {
     notes: project.notes,
     loopRegions: project.loopRegions ?? [],
     view: parseView(project.view),
+    stems: parseStems(project.stems),
   };
 }

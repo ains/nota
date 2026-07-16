@@ -6,8 +6,13 @@ import {
   IPC,
   type OpenAudioResult,
   type SaveProjectAsResult,
+  type StemFile,
 } from "../shared/ipc";
-import { PROJECT_FILE_EXT, PROJECT_STATE_FILE } from "../shared/types/project";
+import {
+  PROJECT_FILE_EXT,
+  PROJECT_STATE_FILE,
+  PROJECT_STEMS_DIR,
+} from "../shared/types/project";
 
 const AUDIO_FILTERS = [
   {
@@ -73,6 +78,44 @@ export function registerIpcHandlers(): void {
     ): Promise<OpenAudioResult | null> => {
       try {
         return await loadAudio(join(projectPath, fileName));
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC.saveProjectStems,
+    async (_e, projectPath: string, files: StemFile[]): Promise<void> => {
+      const stemsDir = join(projectPath, PROJECT_STEMS_DIR);
+      await mkdir(stemsDir, { recursive: true });
+      await Promise.all(
+        files.map((f) =>
+          writeFile(join(stemsDir, basename(f.fileName)), Buffer.from(f.bytes)),
+        ),
+      );
+    },
+  );
+
+  ipcMain.handle(
+    IPC.readProjectStems,
+    async (
+      _e,
+      projectPath: string,
+      fileNames: string[],
+    ): Promise<StemFile[] | null> => {
+      try {
+        const stemsDir = join(projectPath, PROJECT_STEMS_DIR);
+        return await Promise.all(
+          fileNames.map(async (fileName) => {
+            const buf = await readFile(join(stemsDir, basename(fileName)));
+            const bytes = buf.buffer.slice(
+              buf.byteOffset,
+              buf.byteOffset + buf.byteLength,
+            );
+            return { fileName, bytes };
+          }),
+        );
       } catch {
         return null;
       }

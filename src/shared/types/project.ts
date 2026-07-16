@@ -20,6 +20,24 @@ export interface AudioRef extends StoredAudio {
   absolutePath: string;
 }
 
+/** The four Demucs stems, in the model's output order. */
+export const STEM_NAMES = ["drums", "bass", "other", "vocals"] as const;
+export type StemName = (typeof STEM_NAMES)[number];
+
+/**
+ * Stem-separation output persisted inside the project bundle. The stem audio
+ * files live in the bundle's `stems/` folder; like the source audio, no paths
+ * are stored — the location is implicit.
+ */
+export interface StoredStems {
+  /** Demucs model that produced the stems (e.g. "htdemucs"). */
+  modelId: string;
+  /** sha256 of the source audio the stems were separated from. */
+  sourceSha256: string;
+  /** File names inside the bundle's `stems/` folder, one per stem. */
+  fileNames: Record<StemName, string>;
+}
+
 export interface Note {
   id: string;
   /** MIDI note number 0–127 */
@@ -54,6 +72,8 @@ export interface Project {
   loopRegions: LoopRegion[];
   /** Optional — older files predate saved view state. */
   view?: ProjectView;
+  /** Optional — present once stem separation has been run. */
+  stems?: StoredStems;
 }
 
 export const PROJECT_VERSION = 1 as const;
@@ -65,3 +85,5 @@ export const PROJECT_VERSION = 1 as const;
 export const PROJECT_FILE_EXT = "nota";
 /** Name of the state file stored inside the project bundle. */
 export const PROJECT_STATE_FILE = "project.json";
+/** Name of the folder inside the project bundle that holds stem audio. */
+export const PROJECT_STEMS_DIR = "stems";

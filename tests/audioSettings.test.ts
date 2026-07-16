@@ -40,9 +40,22 @@ describe("audio settings persistence", () => {
       synthVolume: 0.25,
       audioMuted: true,
       synthMuted: false,
+      stemVolumes: { drums: 0.5, bass: 1, other: 0.75, vocals: 0 },
+      stemMutes: { drums: false, bass: true, other: false, vocals: false },
     };
     saveAudioSettings(mix);
     expect(loadAudioSettings()).toEqual(mix);
+  });
+
+  it("defaults stem mix fields missing from an older stored blob", () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ musicVolume: 0.4, synthVolume: 0.8 }),
+    );
+    const loaded = loadAudioSettings();
+    expect(loaded.musicVolume).toBe(0.4);
+    expect(loaded.stemVolumes).toEqual(DEFAULT_AUDIO_SETTINGS.stemVolumes);
+    expect(loaded.stemMutes).toEqual(DEFAULT_AUDIO_SETTINGS.stemMutes);
   });
 
   it("clamps out-of-range and non-numeric volumes back to defaults", () => {
