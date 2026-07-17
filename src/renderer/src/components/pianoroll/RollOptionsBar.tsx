@@ -17,14 +17,20 @@ export function RollOptionsBar(): JSX.Element {
   return (
     <div className="roll-options-bar">
       <button
-        onClick={() => void importMidi()}
+        onClick={(e) => {
+          void importMidi();
+          e.currentTarget.blur();
+        }}
         disabled={!hasAudio}
         title="Add notes from a .mid file"
       >
         Import MIDI
       </button>
       <button
-        onClick={() => void exportMidi()}
+        onClick={(e) => {
+          void exportMidi();
+          e.currentTarget.blur();
+        }}
         disabled={!hasNotes}
         title="Export transcription as .mid"
       >
@@ -33,7 +39,10 @@ export function RollOptionsBar(): JSX.Element {
       {isRecording ? (
         <button
           className="tb-rec active"
-          onClick={stopRecording}
+          onClick={(e) => {
+            stopRecording();
+            e.currentTarget.blur();
+          }}
           title="Stop recording"
         >
           ● REC
@@ -41,7 +50,10 @@ export function RollOptionsBar(): JSX.Element {
       ) : (
         <button
           className="tb-rec"
-          onClick={startRecording}
+          onClick={(e) => {
+            startRecording();
+            e.currentTarget.blur();
+          }}
           disabled={!hasAudio}
           title="Record (R)"
         >

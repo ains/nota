@@ -47,13 +47,19 @@ export function TransportBar(): JSX.Element {
       <div className="tb-group">
         <button
           className="tb-back"
-          onClick={() => void backToLibrary()}
+          onClick={(e) => {
+            void backToLibrary();
+            e.currentTarget.blur();
+          }}
           title="Back to library"
         >
           ← Library
         </button>
         <button
-          onClick={() => void saveProject()}
+          onClick={(e) => {
+            void saveProject();
+            e.currentTarget.blur();
+          }}
           disabled={!hasAudio}
           title="Save project (⌘S)"
         >
@@ -63,7 +69,10 @@ export function TransportBar(): JSX.Element {
 
       <div className="tb-group">
         <button
-          onClick={togglePlay}
+          onClick={(e) => {
+            togglePlay();
+            e.currentTarget.blur();
+          }}
           disabled={!hasAudio}
           className="tb-play"
           title="Space"
@@ -71,7 +80,10 @@ export function TransportBar(): JSX.Element {
           {isPlaying ? "⏸" : "⏵"}
         </button>
         <button
-          onClick={stopTransport}
+          onClick={(e) => {
+            stopTransport();
+            e.currentTarget.blur();
+          }}
           disabled={!hasAudio}
           title="Stop (return to start)"
         >
@@ -82,7 +94,7 @@ export function TransportBar(): JSX.Element {
           value={playbackRate}
           onChange={(e) => {
             setPlaybackRate(Number(e.target.value));
-            requestAnimationFrame(() => e.currentTarget.blur());
+            e.currentTarget.blur();
           }}
           disabled={!hasAudio}
           title="Playback speed (pitch preserved)"
@@ -99,7 +111,10 @@ export function TransportBar(): JSX.Element {
       <div className="tb-group tb-right">
         <button
           className={showVolumeDrawer ? "tb-mixer active" : "tb-mixer"}
-          onClick={() => setShowVolumeDrawer(!showVolumeDrawer)}
+          onClick={(e) => {
+            setShowVolumeDrawer(!showVolumeDrawer);
+            e.currentTarget.blur();
+          }}
           title={showVolumeDrawer ? "Hide volume panel" : "Show volume panel"}
         >
           🎚 Audio controls
@@ -107,7 +122,10 @@ export function TransportBar(): JSX.Element {
         {midiError ? (
           <button
             className="tb-midi-error"
-            onClick={() => void retryMidi()}
+            onClick={(e) => {
+              void retryMidi();
+              e.currentTarget.blur();
+            }}
             title={`${midiError} — click to retry`}
           >
             ⚠ MIDI unavailable — retry
@@ -117,7 +135,7 @@ export function TransportBar(): JSX.Element {
             value={activeMidiId ?? ""}
             onChange={(e) => {
               selectMidiDevice(e.target.value || null);
-              requestAnimationFrame(() => e.currentTarget.blur());
+              e.currentTarget.blur();
             }}
             title="MIDI input device"
           >
