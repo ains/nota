@@ -1,6 +1,6 @@
 {
   "name": "Nota",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A pretty, simple cross-platform application for musicians to transcribe music.",
   "main": "./out/main/index.js",
   "author": "Ainsley Escorce-Jones",
