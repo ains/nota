@@ -99,6 +99,7 @@ export function LoopLane(): JSX.Element {
                 e.stopPropagation();
                 if (active) setActiveLoop(null);
                 useProjectStore.getState().deleteLoopRegion(r.id);
+                e.currentTarget.blur();
               }}
             >
               ×

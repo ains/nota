@@ -22,7 +22,10 @@ export function VolumeDrawer(): JSX.Element {
         <span>Audio controls</span>
         <button
           className="vd-close"
-          onClick={() => setShowVolumeDrawer(false)}
+          onClick={(e) => {
+            setShowVolumeDrawer(false);
+            e.currentTarget.blur();
+          }}
           title="Hide volume panel"
         >
           ×

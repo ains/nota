@@ -80,7 +80,13 @@ export function StemControls(): JSX.Element {
           value={progress ?? undefined}
         />
         {stemJobState.cancellable() && (
-          <button className="vd-stem-btn" onClick={cancelStemSeparation}>
+          <button
+            className="vd-stem-btn"
+            onClick={(e) => {
+              cancelStemSeparation();
+              e.currentTarget.blur();
+            }}
+          >
             Cancel
           </button>
         )}
@@ -101,7 +107,10 @@ export function StemControls(): JSX.Element {
       <button
         className="vd-stem-btn"
         disabled={!canSeparate}
-        onClick={() => void separateStems()}
+        onClick={(e) => {
+          void separateStems();
+          e.currentTarget.blur();
+        }}
       >
         {stemJobState.hasError() ? "Retry separation" : "Separate stems"}
       </button>

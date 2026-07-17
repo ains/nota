@@ -61,7 +61,10 @@ export function Library(): JSX.Element {
       <div className="library-grid">
         <button
           className="project-card project-card-open"
-          onClick={() => void openProject()}
+          onClick={(e) => {
+            void openProject();
+            e.currentTarget.blur();
+          }}
           title="Browse for a project file"
         >
           <span className="project-name">Open project…</span>
@@ -71,7 +74,10 @@ export function Library(): JSX.Element {
           <button
             key={p.path}
             className="project-card"
-            onClick={() => void openProjectByPath(p.path)}
+            onClick={(e) => {
+              void openProjectByPath(p.path);
+              e.currentTarget.blur();
+            }}
             title={p.path}
           >
             <span className="project-name">{p.name}</span>

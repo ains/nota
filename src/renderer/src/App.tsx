@@ -107,7 +107,10 @@ function RollToggleBar(): JSX.Element {
     <div className="roll-toggle-bar">
       <button
         className="roll-toggle"
-        onClick={() => setShowPianoRoll(!showPianoRoll)}
+        onClick={(e) => {
+          setShowPianoRoll(!showPianoRoll);
+          e.currentTarget.blur();
+        }}
         title={showPianoRoll ? "Hide piano roll" : "Show piano roll"}
       >
         {showPianoRoll ? "▾" : "▴"} Piano Roll
@@ -164,7 +167,9 @@ function App(): JSX.Element {
     const onKey = (e: KeyboardEvent): void => {
       const target = e.target as HTMLElement;
       if (
-        target.tagName === "INPUT" ||
+        (target instanceof HTMLInputElement &&
+          target.type !== "checkbox" &&
+          target.type !== "range") ||
         target.tagName === "SELECT" ||
         target.tagName === "TEXTAREA"
       )

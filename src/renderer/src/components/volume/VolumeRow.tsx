@@ -23,7 +23,7 @@ export function VolumeRow({
             checked={enabled}
             onChange={(e) => {
               onToggle(e.target.checked);
-              requestAnimationFrame(() => e.currentTarget.blur());
+              e.currentTarget.blur();
             }}
           />
           {label}
@@ -38,7 +38,7 @@ export function VolumeRow({
         value={value}
         disabled={!enabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        onPointerUp={(e) => requestAnimationFrame(() => e.currentTarget.blur())}
+        onPointerUp={(e) => e.currentTarget.blur()}
       />
     </div>
   );
