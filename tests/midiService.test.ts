@@ -38,6 +38,44 @@ describe("MidiService init resilience", () => {
     expect(svc.activeDeviceId).toBe("in1");
   });
 
+  it("activates and binds an input connected after starting with none", async () => {
+    const access = fakeAccess([]);
+    vi.stubGlobal("navigator", {
+      requestMIDIAccess: () => Promise.resolve(access),
+    });
+    const svc = new MidiService();
+    const notes = vi.fn();
+    svc.onNote(notes);
+
+    await svc.init(1000);
+    expect(svc.activeDeviceId).toBeNull();
+
+    const input: FakeInput = {
+      id: "in1",
+      name: "Keys",
+      onmidimessage: null,
+    };
+    (access.inputs as unknown as Map<string, MIDIInput>).set(
+      input.id,
+      input as unknown as MIDIInput,
+    );
+    access.onstatechange?.(new Event("statechange") as MIDIConnectionEvent);
+
+    expect(svc.activeDeviceId).toBe("in1");
+    expect(input.onmidimessage).toBeTypeOf("function");
+
+    (input.onmidimessage as (event: MIDIMessageEvent) => void)({
+      data: new Uint8Array([0x90, 60, 100]),
+      timeStamp: 42,
+    } as MIDIMessageEvent);
+    expect(notes).toHaveBeenCalledWith({
+      kind: "on",
+      midi: 60,
+      velocity: 100,
+      perfMs: 42,
+    });
+  });
+
   it("throws a timeout error when the request never settles", async () => {
     vi.stubGlobal("navigator", {
       requestMIDIAccess: () => new Promise(() => {}),
