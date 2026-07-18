@@ -3,22 +3,54 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nota — Music transcription helper</title>
+    <title>Nota — Open-Source Music Transcription Software for Musicians</title>
     <meta
       name="description"
-      content="A pretty, simple cross-platform application for musicians to transcribe music."
+      content="Transcribe music by ear with Nota, a free, open-source, desktop app with support for slowing down audio without changing pitch and looping passages."
     />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://nota.ains.co/" />
 
     <!-- Social link previews -->
-    <meta property="og:title" content="Nota" />
+    <meta
+      property="og:title"
+      content="Nota — Open-Source Music Transcription Software"
+    />
     <meta
       property="og:description"
-      content="A pretty, simple cross-platform application for musicians to transcribe music."
+      content="Transcribe music by ear with pitch-preserving slowdown, looping and stem separation."
     />
-    <meta property="og:image" content="screenshot.png" />
+    <meta property="og:url" content="https://nota.ains.co/" />
+    <meta property="og:image" content="https://nota.ains.co/screenshot.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Nota — Music Transcription Software" />
+    <meta
+      name="twitter:description"
+      content="Transcribe music by ear with pitch-preserving slowdown, looping and stem separation."
+    />
+    <meta name="twitter:image" content="https://nota.ains.co/screenshot.png" />
+    <meta
+      name="google-site-verification"
+      content="JhpMmccXqfskH0AeJgIhJkUnouAOFH-7ncO2TRnBrGc"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Nota",
+        "url": "https://nota.ains.co/",
+        "image": "https://nota.ains.co/screenshot.png",
+        "description": "Transcribe music by ear with Nota, a free, open-source, desktop app with support for slowing down audio without changing pitch and looping passages.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "macOS, Windows",
+        "offers": {
+          "@type": "Offer",
+          "price": 0,
+          "url": "https://github.com/ains/nota/releases/latest"
+        }
+      }
+    </script>
 
     <style>
       :root {
@@ -152,11 +184,110 @@
         height: auto;
       }
 
+      /* Feature cards borrow the app's bordered-panel language, with a small
+         numbered label that reads like a notation exercise. */
+      .features {
+        margin-top: clamp(4.5rem, 11vw, 7.5rem);
+      }
+      .section-heading {
+        max-width: 38rem;
+        margin: 0 auto 2.25rem;
+        text-align: center;
+      }
+      .eyebrow {
+        margin: 0 0 0.45rem;
+        color: var(--text-dim);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h2 {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: clamp(2.1rem, 5vw, 3.3rem);
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        line-height: 1.1;
+      }
+      .section-intro {
+        margin: 0.85rem auto 0;
+        color: var(--text-dim);
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-top: 1px solid var(--ink);
+        border-left: 1px solid var(--ink);
+      }
+      .feature {
+        min-height: 13rem;
+        padding: clamp(1.35rem, 3.5vw, 2rem);
+        border-right: 1px solid var(--ink);
+        border-bottom: 1px solid var(--ink);
+        background: var(--bg-panel);
+      }
+      .feature-number {
+        display: block;
+        margin-bottom: 2rem;
+        color: var(--text-dim);
+        font-family: var(--serif);
+        font-size: 0.9rem;
+      }
+      .feature h3 {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 1.55rem;
+        font-weight: 600;
+        line-height: 1.15;
+      }
+      .feature p {
+        margin: 0.65rem 0 0;
+        color: var(--text-dim);
+        font-size: 0.95rem;
+        line-height: 1.55;
+      }
+      .faq {
+        margin-top: clamp(4.5rem, 11vw, 7.5rem);
+      }
+      .faq-list {
+        margin: 0;
+        border-top: 1px solid var(--ink);
+      }
+      .faq-item {
+        padding: 1.35rem 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .faq-item h3 {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: 1.3rem;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+      .faq-item p {
+        max-width: 43rem;
+        margin: 0.45rem 0 0;
+        color: var(--text-dim);
+      }
+
       footer {
         margin-top: clamp(3rem, 8vw, 5rem);
-        padding-top: 2rem;
+        padding-top: 4rem;
         border-top: 1px solid var(--border);
         text-align: center;
+      }
+
+      @media (max-width: 560px) {
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+        .feature {
+          min-height: 0;
+        }
+        .feature-number {
+          margin-bottom: 1.5rem;
+        }
       }
     </style>
   </head>
@@ -166,8 +297,8 @@
       <header>
         <h1>Nota</h1>
         <p class="tagline">
-          A pretty, simple cross-platform application for musicians to
-          transcribe music.
+          A pretty, simple, open-source, cross-platform application for
+          musicians to transcribe music.
         </p>
 
         <div class="cta">
@@ -179,7 +310,9 @@
               >Download for Windows</a
             >
           </div>
-          <p class="meta">macOS (Apple silicon) · Windows (64-bit)</p>
+          <p class="meta">
+            Free to download · macOS (Apple silicon) · Windows (64-bit)
+          </p>
         </div>
       </header>
 
@@ -191,6 +324,98 @@
           height="2254"
         />
       </figure>
+
+      <section class="features" aria-labelledby="features-heading">
+        <div class="section-heading">
+          <h2 id="features-heading">Features</h2>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-number">01</span>
+            <h3>High quality time-stretching</h3>
+            <p>
+              Change playback speed without changing pitch. Powered by
+              <a href="https://breakfastquay.com/rubberband/">Rubber Band</a>.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-number">02</span>
+            <h3>Loop the hard parts</h3>
+            <p>
+              Mark a section, play it back, and keep looping until it clicks.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-number">03</span>
+            <h3>MIDI piano roll</h3>
+            <p>
+              Build notes directly in the piano roll alongside the waveform,
+              export the MIDI of finished transcriptions.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-number">04</span>
+            <h3>Stem Separation</h3>
+            <p>
+              Want to practice a solo with the drums and bass from a recording?
+              Separate a song into its stems and listen to only the parts you
+              want to hear.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="faq" aria-labelledby="faq-heading">
+        <div class="section-heading">
+          <h2 id="faq-heading">FAQ</h2>
+        </div>
+
+        <div class="faq-list">
+          <article class="faq-item">
+            <h3>What is Nota?</h3>
+            <p>
+              Nota is desktop music transcription software for musicians who
+              want to learn a recording by ear.
+            </p>
+          </article>
+          <article class="faq-item">
+            <h3>Can I slow down a song without changing its pitch?</h3>
+            <p>
+              Yes. Nota lets you change playback speed without changing the
+              pitch of a song, so difficult passages are easier to hear and play
+              back.
+            </p>
+          </article>
+          <article class="faq-item">
+            <h3>Can I repeat a section while transcribing?</h3>
+            <p>
+              Yes. Mark the phrase you want to study and loop it until you can
+              hear the rhythm, harmony, and individual notes clearly.
+            </p>
+          </article>
+          <article class="faq-item">
+            <h3>How does stem separation work?</h3>
+            <p>
+              To use stem separation, first load your audio file and save a new
+              Nota project. Under "Audio controls", you will now have the
+              ability to perform stem separation. Once completed you will be
+              able to control the volume of each stem separately.
+            </p>
+            <p>
+              Unfortunately, due to performance limitations of WebGPU the stem
+              separation process may take several minutes to complete for the
+              average song.
+            </p>
+          </article>
+          <article class="faq-item">
+            <h3>Which platforms does Nota support?</h3>
+            <p>
+              Nota is available for macOS on Apple silicon and 64-bit Windows.
+            </p>
+          </article>
+        </div>
+      </section>
 
       <footer>
         <a class="btn btn-ghost" href="https://github.com/ains/nota"
