@@ -91,17 +91,23 @@ export class MidiService {
   private adopt(access: MIDIAccess): void {
     this.access = access;
     access.onstatechange = () => {
-      this.emitDevices();
+      let activeDeviceDisconnected = false;
       if (this.activeInputId && !access.inputs.has(this.activeInputId)) {
         // Active device unplugged mid-session.
         this.activeInputId = null;
+        activeDeviceDisconnected = true;
+      }
+
+      this.selectFirstAvailableInput();
+
+      this.rebind();
+      this.emitDevices();
+      if (activeDeviceDisconnected) {
         for (const fn of this.disconnectListeners) fn();
       }
-      this.rebind();
     };
     // Default to the first available input.
-    const first = access.inputs.values().next();
-    if (!first.done) this.activeInputId = first.value.id;
+    this.selectFirstAvailableInput();
     this.rebind();
     this.emitDevices();
     console.log(
@@ -153,6 +159,12 @@ export class MidiService {
       input.onmidimessage =
         input.id === this.activeInputId ? (e) => this.handle(e) : null;
     }
+  }
+
+  private selectFirstAvailableInput(): void {
+    if (this.activeInputId || !this.access) return;
+    const first = this.access.inputs.values().next();
+    if (!first.done) this.activeInputId = first.value.id;
   }
 
   private handle(e: MIDIMessageEvent): void {
