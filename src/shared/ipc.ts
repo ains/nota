@@ -30,6 +30,15 @@ export interface StemFile {
   bytes: ArrayBuffer;
 }
 
+/** Coarse progress phase parsed from the native demucs CLI's stderr. */
+export type NativeStemPhase = "download" | "separate";
+
+/** Outcome of a native (Rust-built demucs CLI) separation run. */
+export type NativeSeparationResult =
+  | { status: "done"; files: StemFile[] }
+  | { status: "cancelled" }
+  | { status: "error"; message: string };
+
 export const IPC = {
   openAudioFile: "dialog:openAudioFile",
   readAudioFile: "fs:readAudioFile",
@@ -46,6 +55,10 @@ export const IPC = {
   whenWindowShown: "window:whenShown",
   consumeOpenPath: "app:consumeOpenPath",
   projectOpened: "project:opened",
+  nativeStemsAvailable: "stems:nativeAvailable",
+  separateStemsNative: "stems:separateNative",
+  cancelNativeSeparation: "stems:cancelNative",
+  nativeStemProgress: "stems:nativeProgress",
 } as const;
 
 export interface NotaBridge {
@@ -109,4 +122,24 @@ export interface NotaBridge {
   consumeOpenPath(): Promise<string[]>;
   /** Subscribe to project bundles opened from Finder while running. Returns an unsubscribe fn. */
   onOpenProject(callback: (projectPath: string) => void): () => void;
+  /**
+   * Whether the bundled Rust demucs CLI is present (production builds, or dev
+   * after `npm run build:demucs`). Checked synchronously once and cached; the
+   * renderer uses it to pick the native path over the WebGPU WASM fallback.
+   */
+  nativeStemSeparationAvailable(): boolean;
+  /**
+   * Separate an audio file with the native demucs CLI. Resolves when the CLI
+   * exits; per-stem WAVs come back at the source file's sample rate. Phase
+   * changes stream via {@link onNativeStemProgress}.
+   */
+  separateStemsNative(
+    sourcePath: string,
+    stems: string[],
+    modelId: string,
+  ): Promise<NativeSeparationResult>;
+  /** Kill the in-flight native separation (no-op when none is running). */
+  cancelNativeStemSeparation(): Promise<void>;
+  /** Subscribe to native separation phase changes. Returns an unsubscribe fn. */
+  onNativeStemProgress(callback: (phase: NativeStemPhase) => void): () => void;
 }

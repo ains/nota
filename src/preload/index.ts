@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import { IPC, type NotaBridge } from "../shared/ipc";
+import { IPC, type NativeStemPhase, type NotaBridge } from "../shared/ipc";
+
+// Whether the native demucs binary is bundled cannot change while the app is
+// running, so one synchronous lookup is cached for the window's lifetime.
+let nativeStemsAvailable: boolean | null = null;
 
 const nota: NotaBridge = {
   openAudioFile: () => ipcRenderer.invoke(IPC.openAudioFile),
@@ -37,6 +41,19 @@ const nota: NotaBridge = {
       callback(projectPath);
     ipcRenderer.on(IPC.projectOpened, listener);
     return () => ipcRenderer.removeListener(IPC.projectOpened, listener);
+  },
+  nativeStemSeparationAvailable: () =>
+    (nativeStemsAvailable ??=
+      ipcRenderer.sendSync(IPC.nativeStemsAvailable) === true),
+  separateStemsNative: (sourcePath, stems, modelId) =>
+    ipcRenderer.invoke(IPC.separateStemsNative, sourcePath, stems, modelId),
+  cancelNativeStemSeparation: () =>
+    ipcRenderer.invoke(IPC.cancelNativeSeparation),
+  onNativeStemProgress: (callback) => {
+    const listener = (_e: unknown, phase: NativeStemPhase): void =>
+      callback(phase);
+    ipcRenderer.on(IPC.nativeStemProgress, listener);
+    return () => ipcRenderer.removeListener(IPC.nativeStemProgress, listener);
   },
 };
 
