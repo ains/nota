@@ -1,6 +1,9 @@
 node_modules
 dist
 out
+# Native demucs CLI staged by scripts/build-demucs-cli.mjs
+resources/demucs
+.cache
 screenshots
 .DS_Store
 .eslintcache

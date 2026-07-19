@@ -9,6 +9,27 @@ npm run lint
 npm run build:mac  # or build:win / build:linux
 ```
 
+### Native stem separation (demucs-rs)
+
+Stem separation has two engines behind one UI: a native CLI built from
+[demucs-rs](https://github.com/nikhilunni/demucs-rs) (Rust, much faster), and
+a WebGPU WASM fallback that runs in the renderer. At runtime the app uses the
+native binary whenever it is present and falls back to WebGPU otherwise.
+
+Release builds always bundle the native CLI — the Release workflow builds it
+on each platform before packaging. In development it is optional:
+
+```bash
+npm run build:demucs   # needs git + a Rust toolchain (https://rustup.rs)
+```
+
+This stages the binary at `resources/demucs/` (gitignored), where both
+`npm run dev` and local packaged builds pick it up automatically. Overrides:
+
+- `DEMUCS_RS_REPO` / `DEMUCS_RS_REF` — build from a different repo or tag.
+- `NOTA_DEMUCS_CLI=/path/to/demucs` — point the app at an existing binary
+  (e.g. from a demucs-rs checkout) without staging anything.
+
 ### Releasing (macOS + Windows builds)
 
 Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml),
@@ -55,7 +76,8 @@ use a virtual MIDI port (macOS: IAC Driver; Windows: loopMIDI).
 ### Code map
 
 ```
-src/main/                 window, Web MIDI permission handlers, throttling flags, file IPC
+src/main/                 window, Web MIDI permission handlers, throttling flags, file IPC,
+                          native demucs CLI runner
 src/preload/              typed contextBridge (window.nota)
 src/shared/               project file types + IPC contracts
 src/renderer/src/

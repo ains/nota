@@ -3,6 +3,7 @@ import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { registerIpcHandlers } from "./ipcHandlers";
+import { registerDemucsIpc } from "./demucsCli";
 import { IPC } from "../shared/ipc";
 
 // The lookahead scheduler must keep ticking when the window is occluded or the
@@ -114,6 +115,7 @@ app.whenReady().then(() => {
   });
 
   registerIpcHandlers();
+  registerDemucsIpc();
 
   createWindow();
 

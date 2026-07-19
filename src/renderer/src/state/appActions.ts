@@ -398,15 +398,20 @@ export async function separateStems(): Promise<void> {
   void window.nota.setPowerSaveBlocker(true);
   session.setStemJobState(StemJobState.downloading(null));
   try {
-    const job = startStemSeparation(buffer, (prog) => {
-      useSessionStore
-        .getState()
-        .setStemJobState(
-          prog.phase === "download"
-            ? StemJobState.downloading(prog.progress)
-            : StemJobState.separating(prog.progress),
-        );
-    });
+    const job = startStemSeparation(
+      buffer,
+      (prog) => {
+        useSessionStore
+          .getState()
+          .setStemJobState(
+            prog.phase === "download"
+              ? StemJobState.downloading(prog.progress)
+              : StemJobState.separating(prog.progress),
+          );
+      },
+      // Lets the native demucs CLI (when bundled) read the audio directly.
+      p.audio.absolutePath,
+    );
     activeStemJob = job;
     const separated = await job.promise;
 
