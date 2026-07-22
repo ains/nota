@@ -31,7 +31,10 @@ const winDownloadUrl = version
   ? `${releaseBase}/Nota-${version}-setup.exe`
   : latestRelease;
 
-const ASSETS = ["screenshot.png", "icon.svg"];
+const ASSETS = [
+  ["screenshot.png", resolve(here, "screenshot.png")],
+  ["icon.svg", resolve(here, "..", "resources", "icon.svg")],
+];
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
@@ -45,7 +48,7 @@ await writeFile(
 );
 
 await Promise.all(
-  ASSETS.map((name) => copyFile(resolve(here, name), resolve(dist, name))),
+  ASSETS.map(([name, source]) => copyFile(source, resolve(dist, name))),
 );
 
 // Tell GitHub Pages not to run the files through Jekyll.
