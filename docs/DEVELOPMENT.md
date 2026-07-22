@@ -16,8 +16,7 @@ which builds and uploads macOS and Windows installers to a **draft** GitHub Rele
 for you to review and publish:
 
 ```bash
-npm version 1.2.3      # bump package.json + create the v1.2.3 tag
-git push --follow-tags
+npm run bump-version -- 1.2.3 # bump package.json + create and push the v1.2.3 tag
 ```
 
 It needs repository secrets (Settings → Secrets and variables → Actions); the
